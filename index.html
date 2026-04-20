@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="單字傳說">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>單字記憶傳說</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0" rel="stylesheet" />
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        window.FirebaseLib = { initializeApp, getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc };
+        window.firebaseLoaded = true;
+        window.dispatchEvent(new Event('firebase-ready'));
+    </script>
+
+    <style>
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        body { -webkit-tap-highlight-color: transparent; }
+        .perspective-1000 { perspective: 1000px; }
+        .preserve-3d { transform-style: preserve-3d; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100 overscroll-none">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect, useRef } = React;
+
+        const Icon = ({ name, size = 24, className = '' }) => (
+            <span className={`material-symbols-rounded ${className}`} style={{ fontSize: size }}>{name}</span>
+        );
+
+        // 基礎預設單字，確保剛進入時有畫面可看
+        const INITIAL_WORDS = [
+            { id: 1, word: 'to', pos: 'prep.', translation: '向', category: 'Unit 37' },
+            { id: 2, word: 'title', pos: 'n.', translation: '標題;頭銜', category: 'Unit 37' },
+            { id: 3, word: 'toast', pos: 'n.', translation: '吐司', category: 'Unit 37' },
+            { id: 4, word: 'today', pos: 'n.', translation: '今天', category: 'Unit 37' },
+            { id: 5, word: 'toe', pos: 'n.', translation: '腳趾', category: 'Unit 37' },
+            { id: 6, word: 'tofu', pos: 'n.', translation: '豆腐', category: 'Unit 37' },
+            { id: 7, word: 'together', pos: 'adv.', translation: '一起', category: 'Unit 37' },
+            { id: 8, word: 'toilet', pos: 'n.', translation: '公共廁所', category: 'Unit 37' },
+            { id: 9, word: 'tomato', pos: 'n.', translation: '番茄', category: 'Unit 37' },
+            { id: 10, word: 'tomorrow', pos: 'n. adv.', translation: '明天', category: 'Unit 37' },
+            { id: 11, word: 'tongue', pos: 'n.', translation: '舌頭', category: 'Unit 37' },
+            { id: 12, word: 'tonight', pos: 'n. adv.', translation: '今晚', category: 'Unit 37' },
+            { id: 13, word: 'too', pos: 'adv.', translation: '太', category: 'Unit 37' },
+            { id: 14, word: 'tool', pos: 'n.', translation: '工具', category: 'Unit 37' },
+            { id: 15, word: 'tooth', pos: 'n.', translation: '牙齒', category: 'Unit 37' }
+        ];
+
+        const INTERVALS = [0, 1, 3, 7, 14, 30];
+        
+        const getRankInfo = (score) => {
+            if (score < 100) return { title: '鐵牌初心者', color: 'text-slate-500', bg: 'bg-slate-100' };
+            if (score < 300) return { title: '銅牌學徒', color: 'text-amber-700', bg: 'bg-amber-100' };
+            if (score < 600) return { title: '銀牌戰士', color: 'text-slate-400', bg: 'bg-slate-200' };
+            if (score < 1000) return { title: '金牌大師', color: 'text-yellow-500', bg: 'bg-yellow-100' };
+            return { title: '鑽石單字王', color: 'text-cyan-500', bg: 'bg-cyan-100' };
+        };
+
+        function MainApp({ db, appId, authUser }) {
+            const { collection, doc, setDoc, getDoc, onSnapshot, updateDoc } = window.FirebaseLib;
+
+            const [view, setView] = useState('login'); 
+            const [virtualDate, setVirtualDate] = useState(Date.now());
+            const [currentUserId, setCurrentUserId] = useState(null);
+            
+            const [globalWords, setGlobalWords] = useState([]);
+            const [users, setUsers] = useState([]);
+            const [userWordStats, setUserWordStats] = useState({});
+            
+            const [settings, setSettings] = useState({ newWordsPerBatch: 10, maxBatchesPerDay: 3, maxReviewsPerBatch: 20 });
+            const [parentPassword, setParentPassword] = useState("111111");
+            
+            const [studyQueue, setStudyQueue] = useState([]);
+            const [currentCardIndex, setCurrentCardIndex] = useState(0);
+            const [isFlipped, setIsFlipped] = useState(false);
+            const [cardStartTime, setCardStartTime] = useState(0);
+            const [recallDuration, setRecallDuration] = useState(null);
+            const [showResult, setShowResult] = useState(null); 
+            
+            const sessionMistakesRef = useRef(0);
+            const [cooldown, setCooldown] = useState(false);
+            const nextCardTimerRef = useRef(null);
+
+            const [newUserName, setNewUserName] = useState('');
+            const [newUserPassword, setNewUserPassword] = useState('');
+            const [newUserAvatar, setNewUserAvatar] = useState(null);
+            
+            const [passwordModalUser, setPasswordModalUser] = useState(null);
+            const [inputPassword, setInputPassword] = useState('');
+            const [passwordError, setPasswordError] = useState(false);
+
+            // 監聽全局設定與字庫
+            useEffect(() => {
+                if(!db || !appId) return;
+                const ref = doc(db, 'artifacts', appId, 'public', 'data', 'system', 'config');
+                const unsub = onSnapshot(ref, (snap) => {
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        if (data.globalWords) setGlobalWords(data.globalWords);
+                        if (data.settings) setSettings(data.settings);
+                        if (data.parentPassword) setParentPassword(data.parentPassword);
+                    } else {
+                        setDoc(ref, { 
+                            globalWords: INITIAL_WORDS, 
+                            settings: { newWordsPerBatch: 10, maxBatchesPerDay: 3, maxReviewsPerBatch: 20 },
+                            parentPassword: "111111"
+                        });
+                    }
+                });
+                return () => unsub();
+            }, [db, appId]);
+
+            // 監聽使用者
+            useEffect(() => {
+                if(!db || !appId) return;
+                const q = collection(db, 'artifacts', appId, 'public', 'data', 'users');
+                const unsub = onSnapshot(q, (snap) => {
+                    const arr = [];
+                    snap.forEach(d => arr.push(d.data()));
+                    setUsers(arr);
+                });
+                return () => unsub();
+            }, [db, appId]);
+
+            // 監聽當前登入英雄進度
+            useEffect(() => {
+                if (!currentUserId || globalWords.length === 0 || !db) return;
+                const ref = doc(db, 'artifacts', appId, 'public', 'data', 'wordStats', currentUserId);
+                const unsub = onSnapshot(ref, (snap) => {
+                    if (snap.exists()) {
+                        setUserWordStats(prev => ({ ...prev, [currentUserId]: snap.data().words }));
+                    } else {
+                        const initialStats = globalWords.map(w => ({ ...w, status: 'new', level: 0, nextReview: null }));
+                        setDoc(ref, { words: initialStats });
+                    }
+                });
+                return () => unsub();
+            }, [db, appId, currentUserId, globalWords]);
+
+            const currentUser = useMemo(() => users.find(u => u.id === currentUserId), [users, currentUserId]);
+            const currentWords = useMemo(() => userWordStats[currentUserId] || [], [userWordStats, currentUserId]);
+
+            const todayStr = useMemo(() => new Date(virtualDate).toDateString(), [virtualDate]);
+            const currentBatches = currentUser?.lastStudyDate === todayStr ? currentUser.dailyBatches : 0;
+
+            const { dueReviewsTotal, failedWordsTotal, newWordsAvailable, masteredWords } = useMemo(() => {
+                let reviews = currentWords.filter(w => w.status === 'learning' && w.nextReview <= virtualDate && w.level > 0);
+                reviews.sort((a, b) => a.nextReview - b.nextReview);
+                
+                let failed = currentWords.filter(w => w.status === 'learning' && w.nextReview <= virtualDate && w.level === 0);
+                failed.sort((a, b) => a.nextReview - b.nextReview);
+
+                let newWords = currentWords.filter(w => w.status === 'new');
+                let mastered = currentWords.filter(w => w.status === 'mastered');
+                return { dueReviewsTotal: reviews, failedWordsTotal: failed, newWordsAvailable: newWords, masteredWords: mastered.length };
+            }, [currentWords, virtualDate]);
+
+            const dueReviewsPreview = useMemo(() => dueReviewsTotal.slice(0, settings.maxReviewsPerBatch), [dueReviewsTotal, settings]);
+            const reviveWordsPreview = useMemo(() => failedWordsTotal.slice(0, 3), [failedWordsTotal]);
+            const newWordsPreview = useMemo(() => {
+                return currentBatches === 0 ? newWordsAvailable.slice(0, settings.newWordsPerBatch) : [];
+            }, [currentBatches, newWordsAvailable, settings]);
+
+            const dashboardQueueTotal = useMemo(() => {
+                return [...dueReviewsPreview, ...reviveWordsPreview, ...newWordsPreview];
+            }, [dueReviewsPreview, reviveWordsPreview, newWordsPreview]);
+
+            // --- 智能 PDF 匯入引擎 ---
+            const handleSmartImport = async (rawText) => {
+                if (!rawText.trim()) return false;
+                try {
+                    let newWords = [];
+                    let currentMaxId = globalWords.length > 0 ? Math.max(...globalWords.map(w => w.id)) : 0;
+
+                    // 正規化換行，將文字攤平成大字串以克服左右排版錯亂
+                    const fullText = rawText.replace(/\n/g, '  ');
+                    
+                    // 以 Unit 切割區塊
+                    const unitChunks = fullText.split(/(?=2000\s*單?\s*Unit\s*\d+|Unit\s*\d+)/i);
+
+                    unitChunks.forEach(chunk => {
+                        const unitMatch = chunk.match(/Unit\s*(\d+)/i);
+                        let currentUnit = unitMatch ? `Unit ${unitMatch[1].padStart(2, '0')}` : 'Unit 未知';
+
+                        // 以數字(1-50)作為分割點，完美拆解錯位的單字
+                        const tokens = chunk.split(/(?:\s|^)\b([1-9]|[1-4][0-9]|50)\s+(?=[a-zA-Z])/);
+                        
+                        for (let i = 1; i < tokens.length; i += 2) {
+                            const num = parseInt(tokens[i]);
+                            const content = tokens[i+1];
+
+                            // 抓取英文
+                            const engMatch = content.match(/^([a-zA-Z\-\'\s]+)/);
+                            if (!engMatch) continue;
+                            const word = engMatch[1].trim();
+
+                            // 抓取詞性
+                            const posMatch = content.match(/\(([a-z\.\/]+)\)/);
+                            const pos = posMatch ? posMatch[1] : '';
+
+                            // 抓取中文翻譯 (第一串出現的中文及後續標點)
+                            const transMatch = content.match(/([\u4e00-\u9fa5]+[^\w\s]*)/);
+                            const translation = transMatch ? transMatch[1].replace(/\s+/g, '') : '無翻譯';
+
+                            // 防呆：如果抓到太短的非單字或全空格則跳過
+                            if (word.length > 0) {
+                                currentMaxId++;
+                                newWords.push({ id: currentMaxId, num, word, pos, translation, category: currentUnit });
+                            }
+                        }
+                    });
+
+                    // 過濾重複單字
+                    const existingWords = new Set(globalWords.map(w => w.word.toLowerCase()));
+                    const filteredNew = newWords.filter(w => !existingWords.has(w.word.toLowerCase()));
+
+                    if (filteredNew.length === 0) return 0;
+
+                    // 更新全局資料庫
+                    const updatedGlobal = [...globalWords, ...filteredNew];
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'config'), { globalWords: updatedGlobal });
+                    
+                    // 分發給所有英雄
+                    for (const u of users) {
+                        const uRef = doc(db, 'artifacts', appId, 'public', 'data', 'wordStats', u.id);
+                        const snap = await getDoc(uRef);
+                        if(snap.exists()) {
+                            const currentW = snap.data().words;
+                            const addedW = filteredNew.map(w => ({ ...w, status: 'new', level: 0, nextReview: null }));
+                            await updateDoc(uRef, { words: [...currentW, ...addedW] });
+                        }
+                    }
+                    return filteredNew.length;
+                } catch (err) {
+                    console.error(err);
+                    return -1;
+                }
+            };
+
+            const handleLoginClick = (user) => {
+                if (!user.password) { setCurrentUserId(user.id); setView('dashboard'); } 
+                else { setPasswordModalUser(user); setInputPassword(''); setPasswordError(false); }
+            };
+
+            const confirmPasswordLogin = () => {
+                if (inputPassword === passwordModalUser.password) {
+                    setCurrentUserId(passwordModalUser.id); setPasswordModalUser(null); setView('dashboard');
+                } else { setPasswordError(true); }
+            };
+
+            const handleImageUpload = (e, setAvatarCallback) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => { setAvatarCallback(reader.result); };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleUpdateCurrentAvatar = async (e) => {
+                handleImageUpload(e, async (base64Img) => {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUserId), { avatar: base64Img });
+                });
+            };
+
+            const handleCreateUser = async () => {
+                if (!newUserName.trim() || !newUserPassword.trim()) return;
+                const newUser = { 
+                    id: Date.now().toString(), name: newUserName.trim(), password: newUserPassword.trim(),
+                    score: 0, totalReviewed: 0, lastStudyDate: null, dailyBatches: 0, avatar: newUserAvatar
+                };
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', newUser.id), newUser);
+                const initialStats = globalWords.map(w => ({ ...w, status: 'new', level: 0, nextReview: null }));
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'wordStats', newUser.id), { words: initialStats });
+
+                setNewUserName(''); setNewUserPassword(''); setNewUserAvatar(null);
+                setCurrentUserId(newUser.id); setView('dashboard');
+            };
+
+            const handleLogout = () => { setCurrentUserId(null); setView('login'); };
+
+            const handleStartInitial = async () => {
+                if (dashboardQueueTotal.length === 0) return;
+                let newBatches = currentBatches;
+                if (newWordsPreview.length > 0) newBatches = 1;
+                
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUserId), { 
+                    lastStudyDate: todayStr, dailyBatches: newBatches 
+                });
+
+                const queue = [...dueReviewsPreview, ...reviveWordsPreview.map(w => ({...w, isRevive: true})), ...newWordsPreview.map(w => ({...w, isNewBatch: true}))].sort(() => Math.random() - 0.5);
+
+                setStudyQueue(queue); setCurrentCardIndex(0); setIsFlipped(false); setCardStartTime(Date.now());
+                setRecallDuration(null); setShowResult(null); setCooldown(false); sessionMistakesRef.current = 0; 
+                setView('study');
+            };
+
+            const handleBonusChallenge = async () => {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUserId), { 
+                    lastStudyDate: todayStr, dailyBatches: currentBatches + 1 
+                });
+                
+                const nextNewWords = newWordsAvailable.slice(0, settings.newWordsPerBatch).map(w => ({...w, isNewBatch: true}));
+                const nextRevive = failedWordsTotal.slice(0, 3).map(w => ({...w, isRevive: true}));
+                const nextQueue = [...nextRevive, ...nextNewWords].sort(() => Math.random() - 0.5);
+
+                setStudyQueue(nextQueue); setCurrentCardIndex(0); setIsFlipped(false); setCardStartTime(Date.now());
+                setRecallDuration(null); setShowResult(null); setCooldown(false); sessionMistakesRef.current = 0; 
+                setView('study');
+            };
+
+            const handleFlip = () => {
+                if (!isFlipped && !showResult && !cooldown) { setIsFlipped(true); setRecallDuration(Date.now() - cardStartTime); }
+            };
+
+            const proceedToNextCard = async (points, newLevel, newStatus, nextReviewTime, currentWordId) => {
+                if(nextCardTimerRef.current) clearTimeout(nextCardTimerRef.current);
+                
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUserId), { 
+                    score: Math.max(0, currentUser.score + points), totalReviewed: (currentUser.totalReviewed || 0) + 1 
+                });
+
+                const updatedWords = currentWords.map(w => w.id === currentWordId ? { ...w, level: newLevel, status: newStatus, nextReview: nextReviewTime } : w);
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'wordStats', currentUserId), { words: updatedWords });
+
+                setShowResult(null); setCooldown(true); 
+
+                if (currentCardIndex < studyQueue.length - 1) {
+                    setCurrentCardIndex(prev => prev + 1); setIsFlipped(false); setCardStartTime(Date.now()); setRecallDuration(null);
+                } else {
+                    if (sessionMistakesRef.current === 0) {
+                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUserId), { score: currentUser.score + points + 100 });
+                    }
+                    setView('result'); 
+                }
+                setTimeout(() => setCooldown(false), 400); 
+            };
+
+            const handleAnswer = (isCorrect) => {
+                if (showResult || cooldown) return; 
+
+                const time = recallDuration || 0; const currentWord = studyQueue[currentCardIndex];
+                let newLevel = currentWord.level; let newStatus = currentWord.status === 'new' ? 'learning' : currentWord.status;
+                let grade, points, comment; let isOverdueBonus = false;
+
+                let overdueDays = 0;
+                if (currentWord.nextReview) overdueDays = Math.floor((virtualDate - currentWord.nextReview) / (24 * 60 * 60 * 1000));
+
+                if (isCorrect) {
+                    if (time <= 2000) { grade = 'S'; points = 50; comment = '秒殺！太神啦！'; newLevel = Math.min(INTERVALS.length - 1, newLevel + 2); } 
+                    else if (time <= 5000) { grade = 'A'; points = 30; comment = '非常流暢！'; newLevel = Math.min(INTERVALS.length - 1, newLevel + 1); } 
+                    else { grade = 'B'; points = 10; comment = '回想較久，再多練練！'; newLevel = Math.max(1, newLevel); }
+                    
+                    if (overdueDays >= 2 && (grade === 'S' || grade === 'A')) {
+                        points += 20; newLevel = Math.min(INTERVALS.length - 1, newLevel + 1); comment = '記憶力超強！(遲到紅利)'; isOverdueBonus = true;
+                    }
+                    if (newLevel === INTERVALS.length - 1) newStatus = 'mastered';
+                } else {
+                    sessionMistakesRef.current += 1;
+                    if (time <= 2000) { grade = 'C'; points = -5; comment = '太心急猜錯囉！'; newLevel = 0; } 
+                    else { grade = 'D'; points = -10; comment = '完全忘記，打回冷宮！'; newLevel = 0; }
+                }
+
+                const daysToAdd = INTERVALS[newLevel];
+                const nextReviewTime = virtualDate + (daysToAdd * 24 * 60 * 60 * 1000);
+
+                const payload = { points, newLevel, newStatus, nextReviewTime, currentWordId: currentWord.id };
+                setShowResult({ grade, points, comment, isCorrect, payload, isOverdueBonus });
+
+                nextCardTimerRef.current = setTimeout(() => {
+                    proceedToNextCard(payload.points, payload.newLevel, payload.newStatus, payload.nextReviewTime, payload.currentWordId);
+                }, 2500); 
+            };
+
+            const skipOverlay = () => {
+                if (showResult) {
+                    const { payload } = showResult;
+                    proceedToNextCard(payload.points, payload.newLevel, payload.newStatus, payload.nextReviewTime, payload.currentWordId);
+                }
+            };
+
+            const skipDay = () => setVirtualDate(prev => prev + (24 * 60 * 60 * 1000));
+            const formatDate = (timestamp) => { if (!timestamp) return '尚未解鎖'; const date = new Date(timestamp); return `${date.getMonth() + 1}/${date.getDate()}`; };
+
+            // ================= 畫面元件 =================
+
+            const renderLogin = () => (
+                <div className="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto p-6 md:p-12 animate-in fade-in zoom-in duration-300 min-h-screen flex flex-col justify-center relative">
+                    <div className="absolute top-4 right-4 md:top-8 md:right-8 flex items-center gap-2">
+                        <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm">
+                            <Icon name="cloud_done" size={16}/> 雲端連線中
+                        </span>
+                    </div>
+
+                    {passwordModalUser && (
+                        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                            <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-sm shadow-2xl animate-in zoom-in-95 spin-in-2">
+                                <div className="flex items-center justify-center w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full mb-4 mx-auto"><Icon name="lock" size={32} /></div>
+                                <h3 className="text-2xl font-black text-center text-slate-800 mb-1">英雄驗證</h3>
+                                <p className="text-center text-sm font-medium text-slate-500 mb-6">請輸入 <span className="text-indigo-600 font-bold">{passwordModalUser.name}</span> 的專屬密碼</p>
+                                <input type="password" placeholder="輸入密碼..." value={inputPassword} onChange={(e) => setInputPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && confirmPasswordLogin()} className={`w-full px-4 py-3 text-lg rounded-xl border-2 focus:outline-none mb-2 transition-colors ${passwordError ? 'border-rose-400 focus:border-rose-500 bg-rose-50' : 'border-slate-200 focus:border-indigo-500'}`} />
+                                {passwordError && <p className="text-rose-500 text-xs font-bold mb-4 text-center">密碼錯誤，請再試一次</p>}
+                                <div className="flex gap-3 mt-6">
+                                    <button onClick={() => setPasswordModalUser(null)} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">取消</button>
+                                    <button onClick={confirmPasswordLogin} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-colors">登入</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="text-center mb-10 md:mb-16">
+                        <div className="inline-flex items-center justify-center w-20 h-20 md:w-28 md:h-28 bg-indigo-600 text-white rounded-full mb-6 shadow-lg shadow-indigo-200">
+                            <Icon name="psychology" size={48} className="md:text-[64px]"/>
+                        </div>
+                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-800 mb-4 tracking-tight">單字記憶傳說</h1>
+                        <p className="text-slate-500 font-medium md:text-xl">加入戰場，挑戰最強鑽石王者</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                        <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8">
+                            <h2 className="text-sm md:text-base font-bold text-slate-400 mb-6 uppercase tracking-wider flex items-center gap-2">
+                                <Icon name="group" size={20}/> 選擇現有英雄
+                            </h2>
+                            <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2">
+                                {users.length === 0 && <p className="text-slate-400 font-medium text-center py-4">尚無英雄，請先創建</p>}
+                                {users.map(user => (
+                                    <button key={user.id} onClick={() => handleLoginClick(user)} className="w-full flex items-center justify-between p-4 md:p-5 rounded-2xl border-2 border-slate-100 hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-14 h-14 md:w-16 md:h-16 flex-shrink-0 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm ${getRankInfo(user.score).bg} ${getRankInfo(user.score).color}`}>
+                                                {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} /> : <Icon name="person" size={28} />}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-slate-800 text-lg md:text-xl">{user.name}</div>
+                                                <div className={`text-sm font-bold mt-1 ${getRankInfo(user.score).color}`}>{getRankInfo(user.score).title} ({user.score} PT)</div>
+                                            </div>
+                                        </div>
+                                        <Icon name={user.password ? "lock" : "play_arrow"} size={28} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-100 rounded-3xl p-6 md:p-8 flex flex-col justify-center">
+                            <h2 className="text-sm md:text-base font-bold text-slate-400 mb-6 uppercase tracking-wider flex items-center gap-2">
+                                <Icon name="person_add" size={20} /> 創建新英雄
+                            </h2>
+                            <div className="flex flex-col gap-4">
+                                <div className="flex justify-center mb-2">
+                                    <label className="relative cursor-pointer group">
+                                        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-white border-4 border-slate-200 shadow-sm flex items-center justify-center overflow-hidden transition-transform group-hover:scale-105">
+                                            {newUserAvatar ? <img src={newUserAvatar} alt="Preview" className="w-full h-full object-cover" /> : <Icon name="add_a_photo" size={32} className="text-slate-400" />}
+                                        </div>
+                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setNewUserAvatar)} />
+                                        <div className="absolute -bottom-2 bg-slate-800 text-white text-[10px] px-3 py-1 rounded-full left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">上傳頭貼</div>
+                                    </label>
+                                </div>
+                                <input type="text" placeholder="輸入英雄名稱..." value={newUserName} onChange={(e) => setNewUserName(e.target.value)} className="w-full px-5 py-4 text-base md:text-lg rounded-xl border-2 border-transparent focus:border-indigo-500 focus:outline-none shadow-sm" />
+                                <input type="password" placeholder="設定通關密碼..." value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} className="w-full px-5 py-4 text-base md:text-lg rounded-xl border-2 border-transparent focus:border-indigo-500 focus:outline-none shadow-sm" />
+                                <button onClick={handleCreateUser} disabled={!newUserName.trim() || !newUserPassword.trim()} className={`w-full text-white px-6 py-4 rounded-xl text-lg font-bold transition-all shadow-md ${newUserName.trim() && newUserPassword.trim() ? 'bg-slate-800 hover:bg-slate-900' : 'bg-slate-300 cursor-not-allowed'}`}>
+                                    註冊並出發
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const renderSettings = () => {
+                const [localSettings, setLocalSettings] = useState(settings);
+                const [isUnlocked, setIsUnlocked] = useState(false);
+                const [unlockCode, setUnlockCode] = useState('');
+                const [unlockError, setUnlockError] = useState(false);
+                const [newParentPwd, setNewParentPwd] = useState('');
+                
+                const [smartText, setSmartText] = useState('');
+                const [isImporting, setIsImporting] = useState(false);
+
+                const handleUnlock = () => {
+                    if (unlockCode === parentPassword) {
+                        setIsUnlocked(true);
+                    } else {
+                        setUnlockError(true);
+                    }
+                };
+
+                const saveSettings = async () => {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'config'), { 
+                        settings: localSettings,
+                        parentPassword: newParentPwd.trim() || parentPassword 
+                    });
+                    alert('⚙️ 家長設定已成功儲存並同步至雲端！');
+                    setView('dashboard');
+                };
+
+                const triggerSmartImport = async () => {
+                    setIsImporting(true);
+                    const count = await handleSmartImport(smartText);
+                    if (count > 0) {
+                        alert(`🎉 神奇！系統成功從亂碼中萃取出 ${count} 個新單字！全體英雄已解鎖新兵器。`);
+                        setSmartText('');
+                    } else if (count === 0) {
+                        alert('匯入的單字都已經存在於字庫中了喔！');
+                    } else {
+                        alert('⚠️ 找不到符合格式的單字，請確保您直接複製了 PDF 裡的內容。');
+                    }
+                    setIsImporting(false);
+                };
+
+                if (!isUnlocked) {
+                    return (
+                        <div className="min-h-screen flex items-center justify-center p-6 animate-in fade-in">
+                            <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-xl border border-slate-100 text-center">
+                                <Icon name="admin_panel_settings" size={64} className="text-indigo-600 mb-4" />
+                                <h2 className="text-2xl font-black text-slate-800 mb-2">家長控制台</h2>
+                                <p className="text-sm text-slate-500 mb-6">請輸入家長管理密碼以修改學習參數。<br/>(系統預設密碼為 <strong className="text-indigo-600">111111</strong>)</p>
+                                <input type="password" placeholder="輸入家長密碼" value={unlockCode} onChange={e => setUnlockCode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleUnlock()} className={`w-full px-5 py-4 text-lg rounded-xl border-2 mb-2 focus:outline-none text-center ${unlockError ? 'border-rose-400 bg-rose-50' : 'border-slate-200 focus:border-indigo-500'}`} />
+                                {unlockError && <p className="text-rose-500 text-xs font-bold mb-4">密碼錯誤，請重試！</p>}
+                                <div className="flex gap-3 mt-6">
+                                    <button onClick={() => setView('dashboard')} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">返回</button>
+                                    <button onClick={handleUnlock} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md">解鎖進入</button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto p-6 md:p-8 animate-in fade-in duration-300 pb-32">
+                        <div className="bg-white rounded-3xl shadow-xl p-6 md:p-10 border border-slate-100">
+                            <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100">
+                                <div className="flex items-center gap-3">
+                                    <Icon name="settings_suggest" size={36} className="text-indigo-600" />
+                                    <h2 className="text-3xl font-black text-slate-800">家長控制台</h2>
+                                </div>
+                                <button onClick={() => setView('dashboard')} className="p-2 text-slate-400 hover:text-slate-800"><Icon name="close" size={28} /></button>
+                            </div>
+                            
+                            <div className="grid md:grid-cols-2 gap-10 md:gap-16">
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2"><Icon name="tune" /> 學習參數調整</h3>
+                                    <div className="space-y-8 mb-8">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">每次挑戰釋放的新單字數 (配額)</label>
+                                            <div className="flex items-center gap-4">
+                                                <input type="range" min="1" max="50" value={localSettings.newWordsPerBatch} onChange={e => setLocalSettings({...localSettings, newWordsPerBatch: parseInt(e.target.value)})} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                                                <span className="font-black text-2xl text-indigo-600 w-12 text-right">{localSettings.newWordsPerBatch}</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">每日最高可挑戰次數 (防爆肝限制)</label>
+                                            <div className="flex items-center gap-4">
+                                                <input type="range" min="1" max="10" value={localSettings.maxBatchesPerDay} onChange={e => setLocalSettings({...localSettings, maxBatchesPerDay: parseInt(e.target.value)})} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                                                <span className="font-black text-2xl text-indigo-600 w-12 text-right">{localSettings.maxBatchesPerDay}</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">每次挑戰最多切塊幾題「積欠舊字」</label>
+                                            <div className="flex items-center gap-4">
+                                                <input type="range" min="5" max="50" step="5" value={localSettings.maxReviewsPerBatch} onChange={e => setLocalSettings({...localSettings, maxReviewsPerBatch: parseInt(e.target.value)})} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                                                <span className="font-black text-2xl text-indigo-600 w-12 text-right">{localSettings.maxReviewsPerBatch}</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">變更家長管理密碼</label>
+                                            <input type="password" placeholder="若不更改請留白" value={newParentPwd} onChange={e => setNewParentPwd(e.target.value)} className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none" />
+                                        </div>
+                                    </div>
+                                    <button onClick={saveSettings} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-colors">儲存上述設定</button>
+                                </div>
+
+                                <div>
+                                    <div className="bg-amber-50 rounded-2xl p-6 border border-amber-100 h-full flex flex-col">
+                                        <h3 className="text-xl font-bold text-amber-800 mb-3 flex items-center gap-2"><Icon name="auto_fix_high" /> 智能 PDF 文字解析引擎</h3>
+                                        <p className="text-sm text-amber-700 mb-4 leading-relaxed">
+                                            不管 PDF 複製出來的文字左右欄有多亂，只要整坨貼在下方，AI 演算法就會自動梳理並匯入！
+                                        </p>
+                                        <textarea 
+                                            value={smartText} 
+                                            onChange={e => setSmartText(e.target.value)} 
+                                            placeholder="請直接從 PDF 複製文字並貼在這裡..."
+                                            className="flex-1 w-full p-4 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white text-sm text-slate-600 resize-none min-h-[200px] mb-4"
+                                        ></textarea>
+                                        <button 
+                                            onClick={triggerSmartImport} 
+                                            disabled={isImporting || !smartText.trim()} 
+                                            className={`w-full py-4 font-black text-white rounded-xl shadow-md transition-colors flex justify-center items-center gap-2 ${isImporting || !smartText.trim() ? 'bg-amber-300 cursor-not-allowed' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'}`}
+                                        >
+                                            {isImporting ? <Icon name="hourglass_empty" className="animate-spin" /> : <Icon name="magic_button" />}
+                                            {isImporting ? '演算法解析中...' : '一鍵智能萃取單字'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderLobby = () => {
+                const rankedUsers = [...users].sort((a, b) => b.score - a.score).map(u => {
+                    const uWords = userWordStats[u.id] || [];
+                    const mastered = uWords.filter(w => w.status === 'mastered').length;
+                    return { ...u, masteredCount: mastered };
+                });
+
+                return (
+                    <div className="max-w-md md:max-w-3xl lg:max-w-4xl mx-auto p-6 md:p-8 animate-in fade-in duration-300 pb-32 overflow-hidden">
+                        <div className="mb-8 md:mb-12 mt-4 text-center">
+                            <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full mb-4 shadow-sm border border-yellow-200"><Icon name="military_tech" size={40} /></div>
+                            <h2 className="text-3xl md:text-4xl font-black text-slate-800 mb-2">榮耀大廳</h2>
+                            <p className="text-slate-500 font-medium md:text-lg">登頂之路，誰與爭鋒</p>
+                        </div>
+
+                        <div className="relative pt-16 pb-24">
+                            <div className="absolute left-1/2 top-0 bottom-0 w-3 md:w-4 bg-gradient-to-b from-indigo-200 via-emerald-200 to-amber-100 transform -translate-x-1/2 rounded-full border-2 border-white shadow-inner"></div>
+                            <div className="absolute left-1/2 top-0 transform -translate-x-1/2 -translate-y-1/2 z-20">
+                                <div className="bg-indigo-600 p-3 rounded-full border-4 border-white shadow-lg text-white"><Icon name="flag" size={32} /></div>
+                            </div>
+
+                            {rankedUsers.map((u, i) => {
+                                const isLeft = i % 2 === 0;
+                                return (
+                                    <div key={u.id} className={`relative flex items-center w-full mb-12 z-10 ${isLeft ? 'justify-start' : 'justify-end'}`}>
+                                        <div className="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 md:w-8 md:h-8 bg-white border-4 border-indigo-500 rounded-full shadow-md z-20 overflow-hidden">
+                                            {u.avatar && <img src={u.avatar} className="w-full h-full object-cover opacity-80" alt="avatar" />}
+                                        </div>
+                                        <div className={`w-[45%] md:w-[42%] flex ${isLeft ? 'justify-end pr-4 md:pr-8' : 'justify-start pl-4 md:pl-8'}`}>
+                                            <div className={`w-full max-w-sm bg-white p-4 md:p-5 rounded-3xl shadow-lg border-2 ${u.id === currentUserId ? 'border-indigo-400 shadow-indigo-100 scale-105' : 'border-slate-100'} relative transform transition hover:scale-105`}>
+                                                {i === 0 && <Icon name="workspace_premium" className="absolute -top-5 -right-3 md:-right-5 text-yellow-400 drop-shadow-md bg-white rounded-full" size={48} />}
+                                                {i === 1 && <Icon name="military_tech" className="absolute -top-4 -right-2 md:-right-4 text-slate-300 drop-shadow-sm bg-white rounded-full" size={40} />}
+                                                {i === 2 && <Icon name="military_tech" className="absolute -top-4 -right-2 md:-right-4 text-orange-400 drop-shadow-sm bg-white rounded-full" size={40} />}
+                                                
+                                                <div className="flex items-center gap-3 mb-1 md:mb-2">
+                                                    {u.avatar ? <img src={u.avatar} className="w-10 h-10 md:w-14 md:h-14 flex-shrink-0 rounded-full object-cover border-2 border-slate-100" alt={u.name} /> : <div className={`w-10 h-10 md:w-14 md:h-14 flex-shrink-0 rounded-full flex items-center justify-center ${getRankInfo(u.score).bg} border-2 border-slate-100`}><Icon name="person" className={getRankInfo(u.score).color} /></div>}
+                                                    <div className="overflow-hidden">
+                                                        <div className="font-black text-lg md:text-2xl text-slate-800 truncate">{u.name}</div>
+                                                        <div className="text-sm md:text-lg font-bold text-indigo-600">{u.score} PT</div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2 mt-3 text-[10px] md:text-xs text-slate-500 font-bold bg-slate-50 p-2 rounded-xl flex-wrap">
+                                                    <span className="flex items-center gap-1"><Icon name="star" size={14} className="text-amber-400"/> {u.masteredCount} 精通</span>
+                                                    <span className="flex items-center gap-1"><Icon name="sports_martial_arts" size={14} className="text-indigo-400" /> {u.totalReviewed || 0} 戰鬥</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderDashboard = () => {
+                const rank = getRankInfo(currentUser.score);
+                
+                return (
+                    <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto p-6 md:p-8 animate-in fade-in duration-300 pb-28">
+                        <div className="flex items-center justify-between mb-8 md:mb-12 bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-slate-100 relative">
+                            <button onClick={() => setView('settings')} className="absolute top-4 right-16 md:top-6 md:right-20 p-2 text-slate-300 hover:text-indigo-600 transition-colors" title="家長設定">
+                                <Icon name="settings" size={28} />
+                            </button>
+                            <button onClick={handleLogout} className="absolute top-4 right-4 md:top-6 md:right-6 p-2 text-slate-300 hover:text-rose-500 transition-colors" title="登出">
+                                <Icon name="logout" size={28} />
+                            </button>
+
+                            <div className="flex items-center gap-4">
+                                <label className="relative cursor-pointer group">
+                                    <div className={`w-16 h-16 md:w-20 md:h-20 flex-shrink-0 rounded-full flex items-center justify-center shadow-inner overflow-hidden border-4 border-white ${rank.bg} ${rank.color}`}>
+                                        {currentUser.avatar ? <img src={currentUser.avatar} alt={currentUser.name} className="w-full h-full object-cover group-hover:opacity-50 transition-opacity" /> : <Icon name="emoji_events" size={40} className="group-hover:opacity-50 transition-opacity" />}
+                                    </div>
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"><Icon name="photo_camera" size={28} className="text-slate-800 drop-shadow-md" /></div>
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleUpdateCurrentAvatar} />
+                                </label>
+                                <div>
+                                    <h1 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">{currentUser.name}</h1>
+                                    <span className={`text-sm md:text-base font-bold px-3 py-1 rounded-full mt-2 inline-block ${rank.bg} ${rank.color}`}>{rank.title} | {currentUser.score} PT</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-8">
+                            <div className="bg-indigo-50 rounded-3xl p-6 text-center shadow-sm border border-indigo-100 relative overflow-hidden flex flex-col justify-center">
+                                <div className="text-5xl md:text-6xl font-black text-indigo-600 mb-2">{dueReviewsTotal.length}</div>
+                                <div className="text-sm md:text-base font-bold text-indigo-800 flex items-center justify-center gap-1"><Icon name="replay" size={18} /> 待複習總數</div>
+                                {dueReviewsTotal.length > settings.maxReviewsPerBatch && <div className="absolute top-2 right-2 bg-indigo-200 text-indigo-800 text-[10px] px-2 py-1 rounded-full font-bold">已自動切塊</div>}
+                            </div>
+                            <div className="bg-rose-50 rounded-3xl p-6 text-center shadow-sm border border-rose-100 relative flex flex-col justify-center">
+                                <div className="text-5xl md:text-6xl font-black text-rose-600 mb-2">{failedWordsTotal.length}</div>
+                                <div className="text-sm md:text-base font-bold text-rose-800 flex items-center justify-center gap-1"><Icon name="healing" size={18} /> 敗部待命</div>
+                                {failedWordsTotal.length > 0 && <span className="absolute top-2 right-2 flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span></span>}
+                            </div>
+                            <div className="bg-amber-50 rounded-3xl p-6 text-center shadow-sm border border-amber-100 col-span-2 md:col-span-1 flex flex-col justify-center">
+                                <div className="text-5xl md:text-6xl font-black text-amber-600 mb-2">{currentBatches} / {settings.maxBatchesPerDay}</div>
+                                <div className="text-sm md:text-base font-bold text-amber-800 flex items-center justify-center gap-1"><Icon name="auto_awesome" size={18}/> 今日新詞挑戰</div>
+                            </div>
+                        </div>
+
+                        <button onClick={handleStartInitial} disabled={dashboardQueueTotal.length === 0} className={`w-full py-5 md:py-6 rounded-2xl text-xl md:text-2xl font-bold shadow-lg transition-all flex flex-col items-center justify-center gap-1 mb-8 md:mb-12 ${dashboardQueueTotal.length > 0 ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:scale-[1.02] hover:shadow-indigo-300' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
+                            <div className="flex items-center gap-2"><Icon name="play_arrow" size={32} /> {dashboardQueueTotal.length > 0 ? `開始本輪戰鬥 (${dashboardQueueTotal.length} 題)` : '全數殲滅，太神啦！'}</div>
+                            {dueReviewsTotal.length > settings.maxReviewsPerBatch && <span className="text-sm font-medium opacity-80">(已為您拆分任務，避免負擔過重)</span>}
+                        </button>
+
+                        <div className="bg-slate-800 rounded-3xl p-6 md:p-8 shadow-xl text-white max-w-2xl mx-auto">
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="text-base md:text-lg font-bold flex items-center gap-2 text-indigo-300"><Icon name="calendar_today" size={20} /> 精神時光屋 (演算法測試)</span>
+                                <span className="text-sm font-mono bg-slate-700 px-3 py-1.5 rounded-lg text-indigo-100">{new Date(virtualDate).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-sm md:text-base text-slate-400 mb-6 leading-relaxed">先打一場，然後快轉5天。你會發現系統只會抽出設定的份量，並且答對時會觸發「遲到紅利」！</p>
+                            <button onClick={skipDay} className="w-full bg-slate-700 hover:bg-indigo-500 text-white text-base md:text-lg font-bold py-4 rounded-xl transition-colors flex justify-center items-center gap-2">
+                                <Icon name="fast_forward" /> 快轉時間 (+24 小時)
+                            </button>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderStudy = () => {
+                const currentWord = studyQueue[currentCardIndex];
+                if (!currentWord) return null;
+
+                return (
+                    <div className="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto p-4 md:p-8 flex flex-col h-[100dvh] md:h-auto md:min-h-screen">
+                        <div className="flex justify-between items-center mb-6 md:mb-10 mt-4">
+                            <button onClick={() => setView('dashboard')} className="p-2 md:px-4 md:py-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-2 text-sm md:text-base font-bold"><Icon name="logout" size={20} /> 撤退</button>
+                            <div className="text-sm md:text-base font-bold text-indigo-600 bg-indigo-50 px-4 md:px-6 py-2 rounded-full border border-indigo-100 flex items-center gap-2">
+                                {currentWord.isRevive && <span className="bg-rose-500 text-white text-[10px] md:text-xs px-2 py-0.5 rounded uppercase flex items-center gap-1"><Icon name="skull" size={12}/> 敗部復活</span>}
+                                {currentWord.isNewBatch && <span className="bg-amber-500 text-white text-[10px] md:text-xs px-2 py-0.5 rounded uppercase">✨ 全新單字</span>}
+                                戰鬥進度: {currentCardIndex + 1} / {studyQueue.length}
+                            </div>
+                        </div>
+
+                        <div className="flex-1 flex flex-col items-center justify-center w-full relative perspective-1000">
+                            {showResult && (
+                                <div className="absolute inset-[-20px] z-50 flex items-center justify-center bg-slate-900/10 backdrop-blur-sm cursor-pointer animate-in fade-in duration-200" onClick={skipOverlay}>
+                                    <div className="bg-white p-8 md:p-12 rounded-3xl shadow-2xl text-center border-4 border-white animate-in zoom-in spin-in-6 duration-300">
+                                        <div className={`text-6xl md:text-8xl font-black mb-4 ${showResult.grade === 'S' ? 'text-amber-500 drop-shadow-lg' : showResult.grade === 'A' ? 'text-blue-500' : showResult.grade === 'B' ? 'text-emerald-500' : 'text-rose-500'}`}>{showResult.grade} 級</div>
+                                        <div className="text-xl md:text-2xl font-bold text-slate-800 mb-2">{showResult.comment}</div>
+                                        <div className={`text-2xl md:text-3xl font-black mb-2 ${showResult.points > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{showResult.points > 0 ? '+' : ''}{showResult.points} PT</div>
+                                        {showResult.isOverdueBonus && <div className="text-sm md:text-base font-bold text-amber-600 mb-6 animate-bounce bg-amber-50 px-4 py-1.5 rounded-full inline-block border border-amber-200">🔥 觸發遲到記憶紅利，單字額外跳級！</div>}
+                                        <div className="text-sm font-bold text-slate-400 animate-pulse bg-slate-100 inline-block px-4 py-2 rounded-full mt-4">(點擊畫面進入下一題)</div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div onClick={handleFlip} className={`w-full h-[60vh] md:h-[500px] lg:h-[600px] rounded-[2rem] md:rounded-[3rem] shadow-xl transition-all duration-500 flex flex-col items-center justify-center p-8 md:p-12 text-center relative overflow-hidden preserve-3d ${isFlipped ? 'bg-white border-4 border-indigo-100' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'} ${showResult ? 'opacity-50 scale-95 blur-sm' : ''} ${cooldown ? 'pointer-events-none' : ''}`}>
+                                {!isFlipped ? (
+                                    <div className="animate-in fade-in duration-300 flex flex-col items-center justify-center w-full h-full">
+                                        <span className="text-slate-400 text-sm md:text-base font-bold mb-6 md:mb-10 block tracking-widest bg-slate-700/50 px-4 py-1.5 rounded-full">{currentWord.category}</span>
+                                        <h2 className="text-6xl md:text-8xl lg:text-9xl font-black text-white tracking-tight">{currentWord.word}</h2>
+                                        <div className="absolute bottom-8 md:bottom-12 text-slate-400 text-base md:text-xl flex items-center gap-2 animate-pulse font-medium"><Icon name="flip_camera_android" size={24} /> 點擊翻開卡片計時</div>
+                                    </div>
+                                ) : (
+                                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 w-full flex flex-col justify-center h-full">
+                                        <h2 className="text-5xl md:text-7xl font-black text-slate-800 mb-4">{currentWord.word}</h2>
+                                        <div className="flex items-center justify-center gap-3 mb-6 md:mb-10 text-indigo-600 font-bold"><span className="bg-indigo-50 px-4 py-1.5 md:text-xl rounded-lg">{currentWord.pos}</span></div>
+                                        {recallDuration && <div className={`text-sm md:text-lg font-black px-5 py-2.5 rounded-full inline-block mb-8 shadow-sm mx-auto ${recallDuration < 2000 ? 'bg-amber-100 text-amber-800 border border-amber-200' : recallDuration < 5000 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>⏱️ 翻牌反應: {(recallDuration / 1000).toFixed(1)} 秒</div>}
+                                        <h3 className="text-4xl md:text-6xl font-black text-slate-700">{currentWord.translation}</h3>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className={`mt-8 md:mt-12 mb-10 transition-all duration-300 ${isFlipped && !showResult ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
+                            <div className="grid grid-cols-2 gap-4 md:gap-8 max-w-2xl mx-auto">
+                                <button onClick={() => handleAnswer(false)} className="flex flex-col items-center justify-center p-6 md:p-8 rounded-3xl bg-white border-2 border-rose-100 text-rose-600 hover:bg-rose-50 hover:border-rose-300 hover:shadow-md transition-all active:scale-95">
+                                    <Icon name="cancel" size={40} className="mb-3 md:mb-4" />
+                                    <span className="text-xl md:text-2xl font-black">答錯了</span>
+                                    <span className="text-sm md:text-base font-medium text-rose-400 mt-2">打回冷宮 / 重新學習</span>
+                                </button>
+                                <button onClick={() => handleAnswer(true)} className="flex flex-col items-center justify-center p-6 md:p-8 rounded-3xl bg-white border-2 border-emerald-100 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-md transition-all active:scale-95">
+                                    <Icon name="check_circle" size={40} className="mb-3 md:mb-4" />
+                                    <span className="text-xl md:text-2xl font-black">答對了</span>
+                                    <span className="text-sm md:text-base font-medium text-emerald-400 mt-2">根據時間拿高分</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderResult = () => {
+                const isPerfect = sessionMistakesRef.current === 0;
+                const canBonus = isPerfect && currentBatches < settings.maxBatchesPerDay && newWordsAvailable.length > 0;
+
+                return (
+                    <div className="max-w-md md:max-w-2xl mx-auto p-6 flex flex-col items-center justify-center min-h-screen text-center animate-in fade-in zoom-in duration-500">
+                        {isPerfect ? (
+                            <div className="bg-amber-50 w-full p-8 md:p-12 rounded-[3rem] shadow-xl border-4 border-amber-200 mb-8">
+                                <Icon name="workspace_premium" size={100} className="text-yellow-400 drop-shadow-lg mx-auto mb-6 animate-bounce" />
+                                <h1 className="text-4xl md:text-5xl font-black text-amber-600 mb-2">完美通關！</h1>
+                                <p className="text-lg font-bold text-amber-500 mb-6">神級記憶力，零失誤達成</p>
+                                <div className="bg-white inline-block px-6 py-3 rounded-full shadow-sm font-black text-2xl text-emerald-500">+100 完美積分</div>
+                            </div>
+                        ) : (
+                            <div className="bg-slate-100 w-full p-8 md:p-12 rounded-[3rem] shadow-md border-4 border-slate-200 mb-8">
+                                <Icon name="health_and_safety" size={80} className="text-indigo-400 mx-auto mb-6" />
+                                <h1 className="text-3xl md:text-4xl font-black text-slate-700 mb-2">戰鬥結算</h1>
+                                <p className="text-lg font-bold text-slate-500 mb-6">跌倒了再站起來，下次會更好！</p>
+                                <div className="bg-white inline-block px-6 py-3 rounded-full shadow-sm font-black text-xl text-rose-500">失誤次數: {sessionMistakesRef.current} 題</div>
+                            </div>
+                        )}
+
+                        {canBonus ? (
+                            <div className="w-full">
+                                <p className="text-slate-500 font-bold mb-4">你已解鎖進階挑戰權限！(今日進度: {currentBatches}/{settings.maxBatchesPerDay})</p>
+                                <button onClick={handleBonusChallenge} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-white py-5 rounded-2xl text-xl font-black shadow-lg hover:scale-105 transition-transform flex justify-center items-center gap-2 mb-4">
+                                    <Icon name="local_fire_department" size={28} /> 連擊！挑戰下一組新字
+                                </button>
+                                <button onClick={() => setView('dashboard')} className="w-full py-4 text-slate-400 font-bold hover:text-slate-600 transition-colors">見好就收，返回主堡</button>
+                            </div>
+                        ) : (
+                            <div className="w-full">
+                                <p className="text-slate-400 font-medium mb-6 px-4">
+                                    {!isPerfect ? "⚠️ 必須達成「0 失誤」才能解鎖下一組新單字喔！" : currentBatches >= settings.maxBatchesPerDay ? "🎉 厲害！今日學習額度已達上限，讓大腦休息一下吧！" : "字庫中已經沒有新單字了，恭喜制霸！"}
+                                </p>
+                                <button onClick={() => setView('dashboard')} className="w-full bg-slate-800 text-white py-5 rounded-2xl text-xl font-black shadow-lg hover:bg-slate-900 transition-colors flex justify-center items-center gap-2">
+                                    <Icon name="home" size={28} /> 返回主堡
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            const renderLibrary = () => (
+                <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto p-6 md:p-8 animate-in fade-in duration-300 pb-28 md:pb-32">
+                    <div className="mb-8 mt-4 flex items-end justify-between">
+                        <div>
+                            <h2 className="text-3xl md:text-4xl font-black text-slate-800 mb-2">作戰兵器庫</h2>
+                            <p className="text-slate-500 font-medium md:text-lg">目前總字數: <span className="text-indigo-600 font-bold">{globalWords.length}</span> 個 / 目標: 2000 個</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        {currentWords.map(word => (
+                            <div key={word.id} className={`bg-white p-5 md:p-6 rounded-2xl shadow-sm border flex items-center justify-between hover:shadow-md transition-shadow ${word.level === 0 && word.status === 'learning' ? 'border-rose-200 bg-rose-50/30' : 'border-slate-100'}`}>
+                                <div>
+                                    <div className="font-bold text-slate-800 text-xl md:text-2xl flex items-center gap-2 mb-2">
+                                        {word.word}
+                                        {word.status === 'mastered' && <Icon name="star" size={20} className="text-amber-400 fill-amber-400" />}
+                                        {word.status === 'new' && <span className="bg-slate-100 text-slate-400 text-[10px] md:text-xs px-2 py-0.5 rounded font-black uppercase">尚未解鎖</span>}
+                                        {word.level === 0 && word.status === 'learning' && <span className="bg-rose-100 text-rose-600 text-[10px] md:text-xs px-2 py-0.5 rounded font-black uppercase">需急救</span>}
+                                    </div>
+                                    <div className="text-sm md:text-base text-slate-500 font-medium"><span className="text-indigo-500 mr-2 bg-indigo-50 px-2 py-0.5 rounded">{word.pos}</span>{word.translation}</div>
+                                </div>
+                                <div className="text-right">
+                                    {word.status === 'mastered' ? <span className="text-sm font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-white px-4 py-2 rounded-full shadow-sm">已精通</span> : word.status === 'new' ? <span className="text-sm font-bold text-slate-300">{word.category}</span> : (
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[10px] md:text-xs text-slate-400 font-bold mb-1 uppercase tracking-wider">下次回歸</span>
+                                            <span className={`text-sm font-black px-3 py-1.5 rounded-lg ${word.nextReview <= virtualDate ? 'bg-rose-100 text-rose-700' : 'bg-indigo-50 text-indigo-600'}`}>{word.nextReview <= virtualDate ? '今天待命' : formatDate(word.nextReview)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen pb-20">
+                    {view === 'login' && renderLogin()}
+                    {view === 'dashboard' && renderDashboard()}
+                    {view === 'settings' && renderSettings()}
+                    {view === 'lobby' && renderLobby()}
+                    {view === 'study' && renderStudy()}
+                    {view === 'result' && renderResult()}
+                    {view === 'library' && renderLibrary()}
+
+                    {view !== 'study' && view !== 'login' && view !== 'result' && view !== 'settings' && (
+                        <div className="fixed bottom-0 left-0 right-0 pointer-events-none flex justify-center z-40 pb-4 md:pb-8 px-4">
+                            <div className="bg-white/95 backdrop-blur-md border border-slate-200 p-2 px-4 md:px-8 flex justify-between items-center w-full max-w-md md:max-w-xl rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] pointer-events-auto">
+                                <button onClick={() => setView('dashboard')} className={`flex-1 flex flex-col items-center p-2 md:p-3 transition-all duration-300 rounded-2xl ${view === 'dashboard' ? 'text-indigo-600 bg-indigo-50 scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Icon name="psychology" size={28} /><span className="text-[10px] md:text-xs font-black mt-1">主堡</span></button>
+                                <button onClick={() => setView('lobby')} className={`flex-1 flex flex-col items-center p-2 md:p-3 transition-all duration-300 rounded-2xl mx-1 ${view === 'lobby' ? 'text-indigo-600 bg-indigo-50 scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Icon name="landscape" size={28} /><span className="text-[10px] md:text-xs font-black mt-1">大廳</span></button>
+                                <button onClick={() => setView('library')} className={`flex-1 flex flex-col items-center p-2 md:p-3 transition-all duration-300 rounded-2xl ${view === 'library' ? 'text-indigo-600 bg-indigo-50 scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Icon name="menu_book" size={28} /><span className="text-[10px] md:text-xs font-black mt-1">兵器庫</span></button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function Boot() {
+            const [loaded, setLoaded] = useState(window.firebaseLoaded);
+            const [user, setUser] = useState(null);
+            const [error, setError] = useState(null);
+
+            useEffect(() => {
+                if (!loaded) {
+                    const handler = () => setLoaded(true);
+                    window.addEventListener('firebase-ready', handler);
+                    return () => window.removeEventListener('firebase-ready', handler);
+                }
+            }, [loaded]);
+
+            useEffect(() => {
+                if (loaded) {
+                    const initAuth = async () => {
+                        try {
+                            const { initializeApp, getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } = window.FirebaseLib;
+                            
+                            // 👇 ========================================================
+                            // 👇 請將下方的 firebaseConfig 區塊，替換成你在 Firebase 複製的金鑰！
+                            // 👇 ========================================================
+                            const myFirebaseConfig = {
+                                apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
+                                authDomain: "vocab-2000.firebaseapp.com",
+                                projectId: "vocab-2000",
+                                storageBucket: "vocab-2000.firebasestorage.app",
+                                messagingSenderId: "459452518715",
+                                appId: "1:459452518715:web:2842926df8a8d73831a71e"
+                            };
+                            // 👆 ========================================================
+
+                            const config = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : myFirebaseConfig;
+                            const app = initializeApp(config);
+                            const auth = getAuth(app);
+
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                            onAuthStateChanged(auth, setUser);
+                        } catch (e) {
+                            setError(e.message);
+                        }
+                    };
+                    initAuth();
+                }
+            }, [loaded]);
+
+            if (error) return <div className="min-h-screen flex items-center justify-center font-bold text-rose-500">雲端連線失敗: {error}</div>;
+            if (!user) return <div className="min-h-screen flex flex-col gap-4 items-center justify-center font-bold text-indigo-600"><Icon name="cloud_sync" size={48} className="animate-pulse" /> 正在建立加密雲端連線...</div>;
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'vocab-legend-cloud-pro';
+            return <MainApp db={window.FirebaseLib.getFirestore()} appId={appId} authUser={user} />;
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Boot />);
+    </script>
+</body>
+</html>
