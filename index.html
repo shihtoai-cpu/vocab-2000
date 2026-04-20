@@ -57,7 +57,6 @@
             <span className={`material-symbols-rounded ${className}`} style={{ fontSize: size }}>{name}</span>
         );
 
-        // 基礎預設單字 (僅供初次載入預覽)
         const INITIAL_WORDS = [
             { id: 1, word: 'to', pos: 'prep.', translation: '向', category: 'Unit 37' },
             { id: 2, word: 'title', pos: 'n.', translation: '標題;頭銜', category: 'Unit 37' },
@@ -114,14 +113,12 @@
             const [inputPassword, setInputPassword] = useState('');
             const [passwordError, setPasswordError] = useState(false);
 
-            // --- 兵器庫管理員狀態 ---
             const [isLibraryAdmin, setIsLibraryAdmin] = useState(false);
             const [showLibraryLogin, setShowLibraryLogin] = useState(false);
             const [libraryUnlockCode, setLibraryUnlockCode] = useState('');
             const [libraryUnlockError, setLibraryUnlockError] = useState(false);
             const [manualWord, setManualWord] = useState({ word: '', pos: '', translation: '', category: '' });
 
-            // --- 家長設定狀態 (修正：移至最上層以避免當機) ---
             const [localSettings, setLocalSettings] = useState({ newWordsPerBatch: 10, maxBatchesPerDay: 3, maxReviewsPerBatch: 20 });
             const [isSettingsUnlocked, setIsSettingsUnlocked] = useState(false);
             const [settingsUnlockCode, setSettingsUnlockCode] = useState('');
@@ -139,7 +136,7 @@
                         if (data.globalWords) setGlobalWords(data.globalWords);
                         if (data.settings) {
                             setSettings(data.settings);
-                            setLocalSettings(data.settings); // 同步本地設定
+                            setLocalSettings(data.settings);
                         }
                         if (data.parentPassword) setParentPassword(data.parentPassword);
                     } else {
@@ -206,7 +203,6 @@
                 return [...dueReviewsPreview, ...reviveWordsPreview, ...newWordsPreview];
             }, [dueReviewsPreview, reviveWordsPreview, newWordsPreview]);
 
-            // --- PDF 智能匯入 ---
             const handleSmartImport = async (rawText) => {
                 if (!rawText.trim()) return false;
                 try {
@@ -262,7 +258,6 @@
                 }
             };
 
-            // --- 手動新增單字 ---
             const handleManualAddWord = async () => {
                 if (!manualWord.word.trim() || !manualWord.translation.trim()) return alert("⚠️ 單字與中文翻譯為必填欄位！");
                 
@@ -293,11 +288,10 @@
                     }
                 }
                 
-                alert(`🎉 成功新增單字：${newWordObj.word}！全體英雄已獲取新兵器。`);
+                alert(`🎉 成功新增單字：${newWordObj.word}！`);
                 setManualWord({ word: '', pos: '', translation: '', category: '' }); 
             };
 
-            // --- CSV 匯入 ---
             const handleCsvImport = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -330,13 +324,64 @@
                                 await updateDoc(uRef, { words: [...currentW, ...addedW] });
                             }
                         }
-                        alert(`🎉 成功匯入 ${newWords.length} 個新單字！所有英雄都已獲得新兵器。`);
+                        alert(`🎉 成功匯入 ${newWords.length} 個新單字！`);
                     } else {
                         alert('⚠️ 匯入失敗：請確認 CSV 格式是否正確\n第一欄：單字\n第二欄：詞性\n第三欄：中文\n第四欄：分類');
                     }
                     e.target.value = null;
                 };
                 reader.readAsText(file);
+            };
+
+            // ==========================================
+            // 🆕 新增功能：單筆刪除單字
+            // ==========================================
+            const handleDeleteWord = async (wordId) => {
+                if (!window.confirm("⚠️ 確定要刪除這個單字嗎？這會從所有英雄的題庫中移除它。")) return;
+
+                // 1. 從全局字庫中移除
+                const updatedGlobal = globalWords.filter(w => w.id !== wordId);
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'config'), { globalWords: updatedGlobal });
+
+                // 2. 從所有使用者的進度中移除
+                for (const u of users) {
+                    const uRef = doc(db, 'artifacts', appId, 'public', 'data', 'wordStats', u.id);
+                    const snap = await getDoc(uRef);
+                    if (snap.exists()) {
+                        const currentW = snap.data().words;
+                        const updatedW = currentW.filter(w => w.id !== wordId);
+                        await updateDoc(uRef, { words: updatedW });
+                    }
+                }
+            };
+
+            // ==========================================
+            // 🆕 新增功能：一鍵清空所有匯入單字 (還原預設)
+            // ==========================================
+            const handleClearAllCustomWords = async () => {
+                if (!window.confirm("🚨 危險操作警告：這將會刪除所有您匯入及手動新增的單字，系統將只保留最原始的 10 個預設單字！\n\n確定要執行大掃除嗎？")) return;
+
+                // 1. 恢復全局字庫為初始狀態
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'config'), { globalWords: INITIAL_WORDS });
+
+                // 2. 重置所有使用者的進度
+                const initialIds = INITIAL_WORDS.map(w => w.id);
+                for (const u of users) {
+                    const uRef = doc(db, 'artifacts', appId, 'public', 'data', 'wordStats', u.id);
+                    const snap = await getDoc(uRef);
+                    if (snap.exists()) {
+                        const currentW = snap.data().words;
+                        // 保留仍在 INITIAL_WORDS 裡的字 (維持進度)，補齊缺失的
+                        let updatedW = currentW.filter(w => initialIds.includes(w.id));
+                        INITIAL_WORDS.forEach(iw => {
+                            if (!updatedW.find(uw => uw.id === iw.id)) {
+                                updatedW.push({ ...iw, status: 'new', level: 0, nextReview: null });
+                            }
+                        });
+                        await updateDoc(uRef, { words: updatedW });
+                    }
+                }
+                alert("🧹 大掃除完成！已清空所有匯入亂碼與自訂單字。");
             };
 
             const handleLibraryUnlock = () => {
@@ -954,17 +999,18 @@
                                 <Icon name="admin_panel_settings" size={28} /> 管理員擴充專區
                             </h3>
                             
-                            <div className="grid md:grid-cols-2 gap-6">
-                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <div className="grid md:grid-cols-3 gap-6">
+                                {/* 手動新增單筆 */}
+                                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 col-span-1 md:col-span-2">
                                     <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Icon name="edit_square" size={20} className="text-indigo-500"/> 手動新增單筆</h4>
                                     <div className="space-y-3">
-                                        <div className="flex gap-2">
-                                            <input type="text" placeholder="單字 (必填)" value={manualWord.word} onChange={e=>setManualWord({...manualWord, word: e.target.value})} className="w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
-                                            <input type="text" placeholder="詞性 (如 n.)" value={manualWord.pos} onChange={e=>setManualWord({...manualWord, pos: e.target.value})} className="w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
+                                        <div className="flex flex-col md:flex-row gap-2">
+                                            <input type="text" placeholder="單字 (必填)" value={manualWord.word} onChange={e=>setManualWord({...manualWord, word: e.target.value})} className="w-full md:w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
+                                            <input type="text" placeholder="詞性 (如 n.)" value={manualWord.pos} onChange={e=>setManualWord({...manualWord, pos: e.target.value})} className="w-full md:w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
                                         </div>
-                                        <div className="flex gap-2">
-                                            <input type="text" placeholder="中文翻譯 (必填)" value={manualWord.translation} onChange={e=>setManualWord({...manualWord, translation: e.target.value})} className="w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
-                                            <input type="text" placeholder="單元 (如 Unit 01)" value={manualWord.category} onChange={e=>setManualWord({...manualWord, category: e.target.value})} className="w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
+                                        <div className="flex flex-col md:flex-row gap-2">
+                                            <input type="text" placeholder="中文翻譯 (必填)" value={manualWord.translation} onChange={e=>setManualWord({...manualWord, translation: e.target.value})} className="w-full md:w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
+                                            <input type="text" placeholder="單元 (如 Unit 01)" value={manualWord.category} onChange={e=>setManualWord({...manualWord, category: e.target.value})} className="w-full md:w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
                                         </div>
                                         <button onClick={handleManualAddWord} className="w-full bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-900 transition-colors mt-2 shadow-md">
                                             確認新增單字
@@ -972,20 +1018,32 @@
                                     </div>
                                 </div>
 
-                                <div className="bg-indigo-600 p-5 md:p-6 rounded-2xl shadow-sm flex flex-col justify-between text-white relative overflow-hidden">
+                                {/* 大量匯入 (CSV) */}
+                                <div className="bg-indigo-600 p-5 rounded-2xl shadow-sm flex flex-col justify-between text-white relative overflow-hidden col-span-1">
                                     <div className="absolute -bottom-6 -right-6 text-indigo-400 opacity-30"><Icon name="upload_file" size={120} /></div>
                                     <div className="relative z-10">
-                                        <h4 className="text-xl font-black mb-2 flex items-center gap-2"><Icon name="upload_file" size={24}/> 大量匯入 (CSV)</h4>
-                                        <p className="text-sm text-indigo-100 mb-6 leading-relaxed">
+                                        <h4 className="font-black mb-2 flex items-center gap-2"><Icon name="upload_file" size={20}/> 大量匯入 (CSV)</h4>
+                                        <p className="text-xs text-indigo-100 mb-6 leading-relaxed">
                                             將 Excel 另存為 .csv 檔即可一鍵匯入。<br/>
-                                            格式：<span className="font-mono bg-indigo-800 text-white px-1.5 py-0.5 rounded text-xs">單字,詞性,中文翻譯,分類單元</span>
+                                            格式：<span className="font-mono bg-indigo-800 text-white px-1.5 py-0.5 rounded">單字,詞性,中文翻譯,分類</span>
                                         </p>
                                     </div>
-                                    <label className="relative z-10 w-full bg-white text-indigo-700 hover:bg-indigo-50 font-black py-3 px-4 rounded-xl cursor-pointer transition-colors text-center shadow-lg">
+                                    <label className="relative z-10 w-full bg-white text-indigo-700 hover:bg-indigo-50 font-black py-3 px-4 rounded-xl cursor-pointer transition-colors text-center shadow-lg text-sm">
                                         <input type="file" accept=".csv" className="hidden" onChange={handleCsvImport} />
                                         選擇 CSV 檔案上傳
                                     </label>
                                 </div>
+                            </div>
+
+                            {/* 🚨 批次刪除危險區 */}
+                            <div className="mt-6 bg-rose-50 border border-rose-200 p-5 rounded-2xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+                                <div>
+                                    <h4 className="font-bold text-rose-800 mb-1 flex items-center gap-2"><Icon name="delete_sweep" size={20}/> 批次清空 (大掃除)</h4>
+                                    <p className="text-xs text-rose-600">如果智能匯入產生大量亂碼，可一鍵清空所有匯入單字，還原回系統預設的 10 個單字。</p>
+                                </div>
+                                <button onClick={handleClearAllCustomWords} className="w-full md:w-auto bg-rose-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-rose-700 transition-colors shadow-md text-sm whitespace-nowrap">
+                                    一鍵清空所有匯入
+                                </button>
                             </div>
                         </div>
                     )}
@@ -1009,12 +1067,17 @@
                                     </div>
                                     <div className="text-sm md:text-base text-slate-500 font-medium"><span className="text-indigo-500 mr-2 bg-indigo-50 px-2 py-0.5 rounded">{word.pos}</span>{word.translation}</div>
                                 </div>
-                                <div className="text-right">
+                                <div className="flex flex-col items-end gap-2">
                                     {word.status === 'mastered' ? <span className="text-sm font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-white px-4 py-2 rounded-full shadow-sm">已精通</span> : word.status === 'new' ? <span className="text-sm font-bold text-slate-300">{word.category}</span> : (
                                         <div className="flex flex-col items-end">
                                             <span className="text-[10px] md:text-xs text-slate-400 font-bold mb-1 uppercase tracking-wider">下次回歸</span>
                                             <span className={`text-sm font-black px-3 py-1.5 rounded-lg ${word.nextReview <= virtualDate ? 'bg-rose-100 text-rose-700' : 'bg-indigo-50 text-indigo-600'}`}>{word.nextReview <= virtualDate ? '今天待命' : formatDate(word.nextReview)}</span>
                                         </div>
+                                    )}
+                                    {isLibraryAdmin && (
+                                        <button onClick={() => handleDeleteWord(word.id)} className="text-rose-400 hover:text-rose-600 bg-rose-50 hover:bg-rose-100 p-2 rounded-lg transition-colors mt-2" title="刪除此單字">
+                                            <Icon name="delete" size={20} />
+                                        </button>
                                     )}
                                 </div>
                             </div>
@@ -1069,7 +1132,7 @@
                             // 👇 請將下方的 firebaseConfig 區塊，替換成你在 Firebase 複製的金鑰！
                             // 👇 ========================================================
                             const myFirebaseConfig = {
-                                apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
+                               apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
   authDomain: "vocab-2000.firebaseapp.com",
   projectId: "vocab-2000",
   storageBucket: "vocab-2000.firebasestorage.app",
