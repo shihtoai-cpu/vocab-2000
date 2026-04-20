@@ -8,15 +8,24 @@
     <meta name="apple-mobile-web-app-title" content="單字傳說">
     <meta name="mobile-web-app-capable" content="yes">
     <title>單字記憶傳說</title>
-<link rel="manifest" href="manifest.json">
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
-        }
-    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0" rel="stylesheet" />
     
+    <link rel="manifest" href="./manifest.json" crossorigin="use-credentials">
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then((registration) => {
+                    console.log('SW registered');
+                }).catch((registrationError) => {
+                    console.log('SW registration failed');
+                });
+            });
+        }
+    </script>
+
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -112,6 +121,15 @@
             const [libraryUnlockError, setLibraryUnlockError] = useState(false);
             const [manualWord, setManualWord] = useState({ word: '', pos: '', translation: '', category: '' });
 
+            // --- 家長設定狀態 (修正：移至最上層以避免當機) ---
+            const [localSettings, setLocalSettings] = useState({ newWordsPerBatch: 10, maxBatchesPerDay: 3, maxReviewsPerBatch: 20 });
+            const [isSettingsUnlocked, setIsSettingsUnlocked] = useState(false);
+            const [settingsUnlockCode, setSettingsUnlockCode] = useState('');
+            const [settingsUnlockError, setSettingsUnlockError] = useState(false);
+            const [newParentPwd, setNewParentPwd] = useState('');
+            const [smartText, setSmartText] = useState('');
+            const [isImporting, setIsImporting] = useState(false);
+
             useEffect(() => {
                 if(!db || !appId) return;
                 const ref = doc(db, 'artifacts', appId, 'public', 'data', 'system', 'config');
@@ -119,7 +137,10 @@
                     if (snap.exists()) {
                         const data = snap.data();
                         if (data.globalWords) setGlobalWords(data.globalWords);
-                        if (data.settings) setSettings(data.settings);
+                        if (data.settings) {
+                            setSettings(data.settings);
+                            setLocalSettings(data.settings); // 同步本地設定
+                        }
                         if (data.parentPassword) setParentPassword(data.parentPassword);
                     } else {
                         setDoc(ref, { 
@@ -558,18 +579,12 @@
             );
 
             const renderSettings = () => {
-                const [localSettings, setLocalSettings] = useState(settings);
-                const [isUnlocked, setIsUnlocked] = useState(false);
-                const [unlockCode, setUnlockCode] = useState('');
-                const [unlockError, setUnlockError] = useState(false);
-                const [newParentPwd, setNewParentPwd] = useState('');
-                
-                const [smartText, setSmartText] = useState('');
-                const [isImporting, setIsImporting] = useState(false);
-
                 const handleUnlock = () => {
-                    if (unlockCode === parentPassword) { setIsUnlocked(true); } 
-                    else { setUnlockError(true); }
+                    if (settingsUnlockCode === parentPassword) { 
+                        setIsSettingsUnlocked(true); 
+                        setSettingsUnlockError(false);
+                    } 
+                    else { setSettingsUnlockError(true); }
                 };
 
                 const saveSettings = async () => {
@@ -595,15 +610,15 @@
                     setIsImporting(false);
                 };
 
-                if (!isUnlocked) {
+                if (!isSettingsUnlocked) {
                     return (
                         <div className="min-h-screen flex items-center justify-center p-6 animate-in fade-in">
                             <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-xl border border-slate-100 text-center">
                                 <Icon name="admin_panel_settings" size={64} className="text-indigo-600 mb-4" />
                                 <h2 className="text-2xl font-black text-slate-800 mb-2">家長控制台</h2>
                                 <p className="text-sm text-slate-500 mb-6">請輸入家長管理密碼以修改學習參數。<br/>(系統預設密碼為 <strong className="text-indigo-600">111111</strong>)</p>
-                                <input type="password" placeholder="輸入家長密碼" value={unlockCode} onChange={e => setUnlockCode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleUnlock()} className={`w-full px-5 py-4 text-lg rounded-xl border-2 mb-2 focus:outline-none text-center ${unlockError ? 'border-rose-400 bg-rose-50' : 'border-slate-200 focus:border-indigo-500'}`} />
-                                {unlockError && <p className="text-rose-500 text-xs font-bold mb-4">密碼錯誤，請重試！</p>}
+                                <input type="password" placeholder="輸入家長密碼" value={settingsUnlockCode} onChange={e => setSettingsUnlockCode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleUnlock()} className={`w-full px-5 py-4 text-lg rounded-xl border-2 mb-2 focus:outline-none text-center ${settingsUnlockError ? 'border-rose-400 bg-rose-50' : 'border-slate-200 focus:border-indigo-500'}`} />
+                                {settingsUnlockError && <p className="text-rose-500 text-xs font-bold mb-4">密碼錯誤，請重試！</p>}
                                 <div className="flex gap-3 mt-6">
                                     <button onClick={() => setView('dashboard')} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">返回</button>
                                     <button onClick={handleUnlock} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md">解鎖進入</button>
@@ -1054,12 +1069,12 @@
                             // 👇 請將下方的 firebaseConfig 區塊，替換成你在 Firebase 複製的金鑰！
                             // 👇 ========================================================
                             const myFirebaseConfig = {
-                               apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
-  authDomain: "vocab-2000.firebaseapp.com",
-  projectId: "vocab-2000",
-  storageBucket: "vocab-2000.firebasestorage.app",
-  messagingSenderId: "459452518715",
-  appId: "1:459452518715:web:2842926df8a8d73831a71e"
+                                apiKey: "AIzaSyB-xxxxxxxxxxxxxxxxxxxxxxxxxx",
+                                authDomain: "vocab-legend-xxxx.firebaseapp.com",
+                                projectId: "vocab-legend-xxxx",
+                                storageBucket: "vocab-legend-xxxx.appspot.com",
+                                messagingSenderId: "1234567890",
+                                appId: "1:1234567890:web:abcdef1234567890"
                             };
                             // 👆 ========================================================
 
