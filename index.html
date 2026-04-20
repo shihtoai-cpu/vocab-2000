@@ -43,7 +43,7 @@
             <span className={`material-symbols-rounded ${className}`} style={{ fontSize: size }}>{name}</span>
         );
 
-        // 基礎預設單字，確保剛進入時有畫面可看
+        // 基礎預設單字 (僅供初次載入預覽)
         const INITIAL_WORDS = [
             { id: 1, word: 'to', pos: 'prep.', translation: '向', category: 'Unit 37' },
             { id: 2, word: 'title', pos: 'n.', translation: '標題;頭銜', category: 'Unit 37' },
@@ -54,12 +54,7 @@
             { id: 7, word: 'together', pos: 'adv.', translation: '一起', category: 'Unit 37' },
             { id: 8, word: 'toilet', pos: 'n.', translation: '公共廁所', category: 'Unit 37' },
             { id: 9, word: 'tomato', pos: 'n.', translation: '番茄', category: 'Unit 37' },
-            { id: 10, word: 'tomorrow', pos: 'n. adv.', translation: '明天', category: 'Unit 37' },
-            { id: 11, word: 'tongue', pos: 'n.', translation: '舌頭', category: 'Unit 37' },
-            { id: 12, word: 'tonight', pos: 'n. adv.', translation: '今晚', category: 'Unit 37' },
-            { id: 13, word: 'too', pos: 'adv.', translation: '太', category: 'Unit 37' },
-            { id: 14, word: 'tool', pos: 'n.', translation: '工具', category: 'Unit 37' },
-            { id: 15, word: 'tooth', pos: 'n.', translation: '牙齒', category: 'Unit 37' }
+            { id: 10, word: 'tomorrow', pos: 'n. adv.', translation: '明天', category: 'Unit 37' }
         ];
 
         const INTERVALS = [0, 1, 3, 7, 14, 30];
@@ -105,7 +100,13 @@
             const [inputPassword, setInputPassword] = useState('');
             const [passwordError, setPasswordError] = useState(false);
 
-            // 監聽全局設定與字庫
+            // --- 兵器庫管理員狀態 ---
+            const [isLibraryAdmin, setIsLibraryAdmin] = useState(false);
+            const [showLibraryLogin, setShowLibraryLogin] = useState(false);
+            const [libraryUnlockCode, setLibraryUnlockCode] = useState('');
+            const [libraryUnlockError, setLibraryUnlockError] = useState(false);
+            const [manualWord, setManualWord] = useState({ word: '', pos: '', translation: '', category: '' });
+
             useEffect(() => {
                 if(!db || !appId) return;
                 const ref = doc(db, 'artifacts', appId, 'public', 'data', 'system', 'config');
@@ -126,7 +127,6 @@
                 return () => unsub();
             }, [db, appId]);
 
-            // 監聽使用者
             useEffect(() => {
                 if(!db || !appId) return;
                 const q = collection(db, 'artifacts', appId, 'public', 'data', 'users');
@@ -138,7 +138,6 @@
                 return () => unsub();
             }, [db, appId]);
 
-            // 監聽當前登入英雄進度
             useEffect(() => {
                 if (!currentUserId || globalWords.length === 0 || !db) return;
                 const ref = doc(db, 'artifacts', appId, 'public', 'data', 'wordStats', currentUserId);
@@ -181,44 +180,31 @@
                 return [...dueReviewsPreview, ...reviveWordsPreview, ...newWordsPreview];
             }, [dueReviewsPreview, reviveWordsPreview, newWordsPreview]);
 
-            // --- 智能 PDF 匯入引擎 ---
+            // --- PDF 智能匯入 ---
             const handleSmartImport = async (rawText) => {
                 if (!rawText.trim()) return false;
                 try {
                     let newWords = [];
                     let currentMaxId = globalWords.length > 0 ? Math.max(...globalWords.map(w => w.id)) : 0;
-
-                    // 正規化換行，將文字攤平成大字串以克服左右排版錯亂
                     const fullText = rawText.replace(/\n/g, '  ');
-                    
-                    // 以 Unit 切割區塊
                     const unitChunks = fullText.split(/(?=2000\s*單?\s*Unit\s*\d+|Unit\s*\d+)/i);
 
                     unitChunks.forEach(chunk => {
                         const unitMatch = chunk.match(/Unit\s*(\d+)/i);
                         let currentUnit = unitMatch ? `Unit ${unitMatch[1].padStart(2, '0')}` : 'Unit 未知';
-
-                        // 以數字(1-50)作為分割點，完美拆解錯位的單字
                         const tokens = chunk.split(/(?:\s|^)\b([1-9]|[1-4][0-9]|50)\s+(?=[a-zA-Z])/);
                         
                         for (let i = 1; i < tokens.length; i += 2) {
                             const num = parseInt(tokens[i]);
                             const content = tokens[i+1];
-
-                            // 抓取英文
                             const engMatch = content.match(/^([a-zA-Z\-\'\s]+)/);
                             if (!engMatch) continue;
                             const word = engMatch[1].trim();
-
-                            // 抓取詞性
                             const posMatch = content.match(/\(([a-z\.\/]+)\)/);
                             const pos = posMatch ? posMatch[1] : '';
-
-                            // 抓取中文翻譯 (第一串出現的中文及後續標點)
                             const transMatch = content.match(/([\u4e00-\u9fa5]+[^\w\s]*)/);
                             const translation = transMatch ? transMatch[1].replace(/\s+/g, '') : '無翻譯';
 
-                            // 防呆：如果抓到太短的非單字或全空格則跳過
                             if (word.length > 0) {
                                 currentMaxId++;
                                 newWords.push({ id: currentMaxId, num, word, pos, translation, category: currentUnit });
@@ -226,17 +212,14 @@
                         }
                     });
 
-                    // 過濾重複單字
                     const existingWords = new Set(globalWords.map(w => w.word.toLowerCase()));
                     const filteredNew = newWords.filter(w => !existingWords.has(w.word.toLowerCase()));
 
                     if (filteredNew.length === 0) return 0;
 
-                    // 更新全局資料庫
                     const updatedGlobal = [...globalWords, ...filteredNew];
                     await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'config'), { globalWords: updatedGlobal });
                     
-                    // 分發給所有英雄
                     for (const u of users) {
                         const uRef = doc(db, 'artifacts', appId, 'public', 'data', 'wordStats', u.id);
                         const snap = await getDoc(uRef);
@@ -250,6 +233,94 @@
                 } catch (err) {
                     console.error(err);
                     return -1;
+                }
+            };
+
+            // --- 手動新增單字 ---
+            const handleManualAddWord = async () => {
+                if (!manualWord.word.trim() || !manualWord.translation.trim()) return alert("⚠️ 單字與中文翻譯為必填欄位！");
+                
+                const existingWords = new Set(globalWords.map(w => w.word.toLowerCase()));
+                if (existingWords.has(manualWord.word.trim().toLowerCase())) {
+                    return alert("⚠️ 這個單字已經在字庫中囉！");
+                }
+
+                const currentMaxId = globalWords.length > 0 ? Math.max(...globalWords.map(w => w.id)) : 0;
+                const newWordObj = {
+                    id: currentMaxId + 1,
+                    word: manualWord.word.trim(),
+                    pos: manualWord.pos.trim() || '未知',
+                    translation: manualWord.translation.trim(),
+                    category: manualWord.category.trim() || '自訂單字'
+                };
+
+                const updatedGlobal = [...globalWords, newWordObj];
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'config'), { globalWords: updatedGlobal });
+                
+                for (const u of users) {
+                    const uRef = doc(db, 'artifacts', appId, 'public', 'data', 'wordStats', u.id);
+                    const snap = await getDoc(uRef);
+                    if(snap.exists()) {
+                        const currentW = snap.data().words;
+                        const addedW = { ...newWordObj, status: 'new', level: 0, nextReview: null };
+                        await updateDoc(uRef, { words: [...currentW, addedW] });
+                    }
+                }
+                
+                alert(`🎉 成功新增單字：${newWordObj.word}！全體英雄已獲取新兵器。`);
+                setManualWord({ word: '', pos: '', translation: '', category: '' }); 
+            };
+
+            // --- CSV 匯入 ---
+            const handleCsvImport = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const text = event.target.result;
+                    const rows = text.split(/\r?\n/);
+                    const newWords = [];
+                    let currentMaxId = globalWords.length > 0 ? Math.max(...globalWords.map(w => w.id)) : 0;
+
+                    rows.forEach((row) => {
+                        const cols = row.split(',').map(c => c.trim());
+                        if (cols.length >= 4 && cols[0] && cols[0] !== '單字' && cols[0] !== 'word') {
+                            currentMaxId++;
+                            newWords.push({ id: currentMaxId, word: cols[0], pos: cols[1], translation: cols[2], category: cols[3] });
+                        }
+                    });
+
+                    if (newWords.length > 0) {
+                        const updatedGlobal = [...globalWords, ...newWords];
+                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'config'), { globalWords: updatedGlobal });
+                        
+                        for (const u of users) {
+                            const uRef = doc(db, 'artifacts', appId, 'public', 'data', 'wordStats', u.id);
+                            const snap = await getDoc(uRef);
+                            if(snap.exists()) {
+                                const currentW = snap.data().words;
+                                const addedW = newWords.map(w => ({ ...w, status: 'new', level: 0, nextReview: null }));
+                                await updateDoc(uRef, { words: [...currentW, ...addedW] });
+                            }
+                        }
+                        alert(`🎉 成功匯入 ${newWords.length} 個新單字！所有英雄都已獲得新兵器。`);
+                    } else {
+                        alert('⚠️ 匯入失敗：請確認 CSV 格式是否正確\n第一欄：單字\n第二欄：詞性\n第三欄：中文\n第四欄：分類');
+                    }
+                    e.target.value = null;
+                };
+                reader.readAsText(file);
+            };
+
+            const handleLibraryUnlock = () => {
+                if (libraryUnlockCode === parentPassword) {
+                    setIsLibraryAdmin(true);
+                    setShowLibraryLogin(false);
+                    setLibraryUnlockCode('');
+                    setLibraryUnlockError(false);
+                } else {
+                    setLibraryUnlockError(true);
                 }
             };
 
@@ -492,11 +563,8 @@
                 const [isImporting, setIsImporting] = useState(false);
 
                 const handleUnlock = () => {
-                    if (unlockCode === parentPassword) {
-                        setIsUnlocked(true);
-                    } else {
-                        setUnlockError(true);
-                    }
+                    if (unlockCode === parentPassword) { setIsUnlocked(true); } 
+                    else { setUnlockError(true); }
                 };
 
                 const saveSettings = async () => {
@@ -587,20 +655,9 @@
                                 <div>
                                     <div className="bg-amber-50 rounded-2xl p-6 border border-amber-100 h-full flex flex-col">
                                         <h3 className="text-xl font-bold text-amber-800 mb-3 flex items-center gap-2"><Icon name="auto_fix_high" /> 智能 PDF 文字解析引擎</h3>
-                                        <p className="text-sm text-amber-700 mb-4 leading-relaxed">
-                                            不管 PDF 複製出來的文字左右欄有多亂，只要整坨貼在下方，AI 演算法就會自動梳理並匯入！
-                                        </p>
-                                        <textarea 
-                                            value={smartText} 
-                                            onChange={e => setSmartText(e.target.value)} 
-                                            placeholder="請直接從 PDF 複製文字並貼在這裡..."
-                                            className="flex-1 w-full p-4 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white text-sm text-slate-600 resize-none min-h-[200px] mb-4"
-                                        ></textarea>
-                                        <button 
-                                            onClick={triggerSmartImport} 
-                                            disabled={isImporting || !smartText.trim()} 
-                                            className={`w-full py-4 font-black text-white rounded-xl shadow-md transition-colors flex justify-center items-center gap-2 ${isImporting || !smartText.trim() ? 'bg-amber-300 cursor-not-allowed' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'}`}
-                                        >
+                                        <p className="text-sm text-amber-700 mb-4 leading-relaxed">不管 PDF 複製出來的文字左右欄有多亂，只要整坨貼在下方，AI 演算法就會自動梳理並匯入！</p>
+                                        <textarea value={smartText} onChange={e => setSmartText(e.target.value)} placeholder="請直接從 PDF 複製文字並貼在這裡..." className="flex-1 w-full p-4 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white text-sm text-slate-600 resize-none min-h-[200px] mb-4"></textarea>
+                                        <button onClick={triggerSmartImport} disabled={isImporting || !smartText.trim()} className={`w-full py-4 font-black text-white rounded-xl shadow-md transition-colors flex justify-center items-center gap-2 ${isImporting || !smartText.trim() ? 'bg-amber-300 cursor-not-allowed' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'}`}>
                                             {isImporting ? <Icon name="hourglass_empty" className="animate-spin" /> : <Icon name="magic_button" />}
                                             {isImporting ? '演算法解析中...' : '一鍵智能萃取單字'}
                                         </button>
@@ -841,9 +898,81 @@
 
             const renderLibrary = () => (
                 <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto p-6 md:p-8 animate-in fade-in duration-300 pb-28 md:pb-32">
+                    
+                    <div className="flex justify-end mb-4">
+                        {!isLibraryAdmin ? (
+                            <button onClick={() => setShowLibraryLogin(!showLibraryLogin)} className="text-sm font-bold text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition-colors bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-100">
+                                <Icon name="lock" size={16} /> 進入管理員模式 (擴充題庫)
+                            </button>
+                        ) : (
+                            <button onClick={() => setIsLibraryAdmin(false)} className="text-sm font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors bg-emerald-50 px-3 py-1.5 rounded-full shadow-sm border border-emerald-100">
+                                <Icon name="lock_open" size={16} /> 已解鎖管理員模式 (點擊鎖定)
+                            </button>
+                        )}
+                    </div>
+
+                    {showLibraryLogin && !isLibraryAdmin && (
+                        <div className="bg-white border border-slate-200 p-4 rounded-2xl mb-6 flex flex-col md:flex-row gap-3 animate-in fade-in slide-in-from-top-4 shadow-md max-w-md ml-auto">
+                            <input 
+                                type="password" 
+                                placeholder="輸入家長/管理員密碼..." 
+                                value={libraryUnlockCode} 
+                                onChange={e=>setLibraryUnlockCode(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleLibraryUnlock()}
+                                className={`flex-1 px-4 py-2.5 rounded-xl border-2 focus:outline-none ${libraryUnlockError ? 'border-rose-400 bg-rose-50' : 'bg-slate-50 border-slate-200 focus:border-indigo-400'}`} 
+                            />
+                            <div className="flex gap-2">
+                                <button onClick={() => setShowLibraryLogin(false)} className="bg-slate-100 text-slate-600 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-200">取消</button>
+                                <button onClick={handleLibraryUnlock} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-indigo-700">解鎖</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {isLibraryAdmin && (
+                        <div className="bg-indigo-50 border-2 border-indigo-100 rounded-3xl p-6 md:p-8 mb-8 shadow-sm animate-in fade-in zoom-in-95">
+                            <h3 className="text-xl md:text-2xl font-black text-indigo-800 mb-6 flex items-center gap-2">
+                                <Icon name="admin_panel_settings" size={28} /> 管理員擴充專區
+                            </h3>
+                            
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100">
+                                    <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Icon name="edit_square" size={20} className="text-indigo-500"/> 手動新增單筆</h4>
+                                    <div className="space-y-3">
+                                        <div className="flex gap-2">
+                                            <input type="text" placeholder="單字 (必填)" value={manualWord.word} onChange={e=>setManualWord({...manualWord, word: e.target.value})} className="w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
+                                            <input type="text" placeholder="詞性 (如 n.)" value={manualWord.pos} onChange={e=>setManualWord({...manualWord, pos: e.target.value})} className="w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input type="text" placeholder="中文翻譯 (必填)" value={manualWord.translation} onChange={e=>setManualWord({...manualWord, translation: e.target.value})} className="w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
+                                            <input type="text" placeholder="單元 (如 Unit 01)" value={manualWord.category} onChange={e=>setManualWord({...manualWord, category: e.target.value})} className="w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
+                                        </div>
+                                        <button onClick={handleManualAddWord} className="w-full bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-900 transition-colors mt-2 shadow-md">
+                                            確認新增單字
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="bg-indigo-600 p-5 md:p-6 rounded-2xl shadow-sm flex flex-col justify-between text-white relative overflow-hidden">
+                                    <div className="absolute -bottom-6 -right-6 text-indigo-400 opacity-30"><Icon name="upload_file" size={120} /></div>
+                                    <div className="relative z-10">
+                                        <h4 className="text-xl font-black mb-2 flex items-center gap-2"><Icon name="upload_file" size={24}/> 大量匯入 (CSV)</h4>
+                                        <p className="text-sm text-indigo-100 mb-6 leading-relaxed">
+                                            將 Excel 另存為 .csv 檔即可一鍵匯入。<br/>
+                                            格式：<span className="font-mono bg-indigo-800 text-white px-1.5 py-0.5 rounded text-xs">單字,詞性,中文翻譯,分類單元</span>
+                                        </p>
+                                    </div>
+                                    <label className="relative z-10 w-full bg-white text-indigo-700 hover:bg-indigo-50 font-black py-3 px-4 rounded-xl cursor-pointer transition-colors text-center shadow-lg">
+                                        <input type="file" accept=".csv" className="hidden" onChange={handleCsvImport} />
+                                        選擇 CSV 檔案上傳
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="mb-8 mt-4 flex items-end justify-between">
                         <div>
-                            <h2 className="text-3xl md:text-4xl font-black text-slate-800 mb-2">作戰兵器庫</h2>
+                            <h2 className="text-3xl md:text-4xl font-black text-slate-800 mb-2">全字庫檢視</h2>
                             <p className="text-slate-500 font-medium md:text-lg">目前總字數: <span className="text-indigo-600 font-bold">{globalWords.length}</span> 個 / 目標: 2000 個</p>
                         </div>
                     </div>
@@ -920,12 +1049,12 @@
                             // 👇 請將下方的 firebaseConfig 區塊，替換成你在 Firebase 複製的金鑰！
                             // 👇 ========================================================
                             const myFirebaseConfig = {
-                                apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
-                                authDomain: "vocab-2000.firebaseapp.com",
-                                projectId: "vocab-2000",
-                                storageBucket: "vocab-2000.firebasestorage.app",
-                                messagingSenderId: "459452518715",
-                                appId: "1:459452518715:web:2842926df8a8d73831a71e"
+                               apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
+  authDomain: "vocab-2000.firebaseapp.com",
+  projectId: "vocab-2000",
+  storageBucket: "vocab-2000.firebasestorage.app",
+  messagingSenderId: "459452518715",
+  appId: "1:459452518715:web:2842926df8a8d73831a71e"
                             };
                             // 👆 ========================================================
 
@@ -950,7 +1079,8 @@
             if (error) return <div className="min-h-screen flex items-center justify-center font-bold text-rose-500">雲端連線失敗: {error}</div>;
             if (!user) return <div className="min-h-screen flex flex-col gap-4 items-center justify-center font-bold text-indigo-600"><Icon name="cloud_sync" size={48} className="animate-pulse" /> 正在建立加密雲端連線...</div>;
 
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'vocab-legend-cloud-pro';
+            // 👇 這是你在雲端資料庫的專屬資料夾名稱，可以自由更改
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'my-family-vocab-db';
             return <MainApp db={window.FirebaseLib.getFirestore()} appId={appId} authUser={user} />;
         }
 
