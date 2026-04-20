@@ -1,6 +1,6 @@
 {
-  "name": "國中必備2000字",
-  "short_name": "英單2000字",
+  "name": "單字記憶傳說",
+  "short_name": "單字傳說",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
