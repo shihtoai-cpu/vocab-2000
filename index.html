@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="單字傳說">
+    <meta name="apple-mobile-web-app-title" content="修仙單字傳">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>單字記憶傳說</title>
+    <title>單字記憶傳說：仙逆</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0" rel="stylesheet" />
@@ -57,31 +57,61 @@
             { id: 2, word: 'title', pos: 'n.', translation: '標題;頭銜', category: 'Unit 37' },
             { id: 3, word: 'toast', pos: 'n.', translation: '吐司', category: 'Unit 37' },
             { id: 4, word: 'today', pos: 'n.', translation: '今天', category: 'Unit 37' },
-            { id: 5, word: 'toe', pos: 'n.', translation: '腳趾', category: 'Unit 37' },
-            { id: 6, word: 'tofu', pos: 'n.', translation: '豆腐', category: 'Unit 37' },
-            { id: 7, word: 'together', pos: 'adv.', translation: '一起', category: 'Unit 37' },
-            { id: 8, word: 'toilet', pos: 'n.', translation: '公共廁所', category: 'Unit 37' },
-            { id: 9, word: 'tomato', pos: 'n.', translation: '番茄', category: 'Unit 37' },
-            { id: 10, word: 'tomorrow', pos: 'n. adv.', translation: '明天', category: 'Unit 37' }
+            { id: 5, word: 'toe', pos: 'n.', translation: '腳趾', category: 'Unit 37' }
         ];
 
         const INTERVALS = [0, 1, 3, 7, 14, 30];
         
-        // 修仙境界系統
+        // =========================================
+        // 🐉 仙逆修為境界動態產生器 (完美多項式曲線)
+        // Required Score = 150*i + 12*(i^3)
+        // =========================================
+        const MAIN_RANKS = [
+            { name: "凝氣", color: "text-slate-500", bg: "bg-slate-200" }, // 第一步
+            { name: "築基", color: "text-emerald-600", bg: "bg-emerald-100" },
+            { name: "結丹", color: "text-cyan-600", bg: "bg-cyan-100" },
+            { name: "元嬰", color: "text-blue-600", bg: "bg-blue-100" },
+            { name: "化神", color: "text-indigo-600", bg: "bg-indigo-100" },
+            { name: "嬰變", color: "text-violet-600", bg: "bg-violet-100" },
+            { name: "問鼎", color: "text-purple-600", bg: "bg-purple-100" },
+            { name: "陰虛", color: "text-fuchsia-600", bg: "bg-fuchsia-200", single: true }, // 第二步 (過渡)
+            { name: "陽實", color: "text-fuchsia-700", bg: "bg-fuchsia-300", single: true },
+            { name: "窺涅", color: "text-pink-600", bg: "bg-pink-100" },
+            { name: "淨涅", color: "text-rose-600", bg: "bg-rose-100" },
+            { name: "碎涅", color: "text-red-600", bg: "bg-red-100" },
+            { name: "空靈", color: "text-orange-600", bg: "bg-orange-100" }, // 第三步
+            { name: "空玄", color: "text-amber-600", bg: "bg-amber-100" },
+            { name: "空劫", color: "text-yellow-600", bg: "bg-yellow-100" }
+        ];
+        const SUB_RANKS = ["前期", "中期", "後期", "大圓滿"];
+
+        const RANKS_DB = [{ name: '凡人', score: 0, color: 'text-slate-400', bg: 'bg-slate-100' }];
+        let rankIndex = 1;
+        MAIN_RANKS.forEach(mr => {
+            if (mr.single) {
+                RANKS_DB.push({ name: mr.name, score: Math.floor(150 * rankIndex + 12 * Math.pow(rankIndex, 3)), color: mr.color, bg: mr.bg });
+                rankIndex++;
+            } else {
+                SUB_RANKS.forEach(sr => {
+                    RANKS_DB.push({ name: mr.name + sr, score: Math.floor(150 * rankIndex + 12 * Math.pow(rankIndex, 3)), color: mr.color, bg: mr.bg });
+                    rankIndex++;
+                });
+            }
+        });
+        // 最終境界 (Index 54，約需 189 萬積分)
+        RANKS_DB.push({ name: '踏天境', score: Math.floor(150 * rankIndex + 12 * Math.pow(rankIndex, 3)), color: 'text-yellow-400 font-black drop-shadow-md', bg: 'bg-slate-900' });
+
         const getRankInfo = (score) => {
-            if (score < 100) return { title: '凡人', color: 'text-slate-500', bg: 'bg-slate-200' };
-            if (score < 300) return { title: '練氣期', color: 'text-emerald-600', bg: 'bg-emerald-100' };
-            if (score < 600) return { title: '築基期', color: 'text-cyan-600', bg: 'bg-cyan-100' };
-            if (score < 1000) return { title: '金丹期', color: 'text-yellow-600', bg: 'bg-yellow-100' };
-            if (score < 1500) return { title: '元嬰期', color: 'text-purple-600', bg: 'bg-purple-100' };
-            if (score < 2500) return { title: '化神期', color: 'text-rose-600', bg: 'bg-rose-100' };
-            if (score < 4000) return { title: '煉虛期', color: 'text-orange-600', bg: 'bg-orange-100' };
-            if (score < 6000) return { title: '合體期', color: 'text-red-600', bg: 'bg-red-100' };
-            if (score < 10000) return { title: '大乘期', color: 'text-indigo-600', bg: 'bg-indigo-100' };
-            return { title: '渡劫仙尊', color: 'text-amber-400 animate-pulse font-black', bg: 'bg-slate-900' };
+            let currentRank = RANKS_DB[0];
+            for (let i = 0; i < RANKS_DB.length; i++) {
+                if (score >= RANKS_DB[i].score) currentRank = RANKS_DB[i];
+                else break;
+            }
+            // 找出下一階所需分數
+            const nextRank = RANKS_DB.find(r => r.score > score);
+            return { ...currentRank, nextScore: nextRank ? nextRank.score : null };
         };
 
-        // 產生拼寫底線
         const generateBlanks = (word) => {
             return word.split('').map(c => /[a-zA-Z]/.test(c) ? '_' : c).join('');
         };
@@ -99,10 +129,10 @@
             const [userWordStats, setUserWordStats] = useState({});
             
             const [settings, setSettings] = useState({ newWordsPerBatch: 10, maxBatchesPerDay: 3, maxReviewsPerBatch: 20 });
-            const [parentPassword, setParentPassword] = useState("123456"); // 預設密碼改為 123456
+            const [parentPassword, setParentPassword] = useState("123456"); 
             
-            // 戰鬥與特訓狀態
-            const [studyMode, setStudyMode] = useState('flashcard'); // 'flashcard' 或 'spelling'
+            // 戰鬥狀態
+            const [studyMode, setStudyMode] = useState('flashcard'); 
             const [isPracticeMode, setIsPracticeMode] = useState(false);
             const [isReviveMode, setIsReviveMode] = useState(false);
             const [studyQueue, setStudyQueue] = useState([]);
@@ -114,7 +144,7 @@
             const [spellInput, setSpellInput] = useState('');
             
             const sessionMistakesRef = useRef(0);
-            const sessionMissedWords = useRef([]); // 記錄當局錯題，給復活賽用
+            const sessionMissedWords = useRef([]); 
 
             const [newUserName, setNewUserName] = useState('');
             const [newUserPassword, setNewUserPassword] = useState('');
@@ -202,6 +232,16 @@
                 return { dueReviewsTotal: reviews, failedWordsTotal: failed, newWordsAvailable: newWords, masteredWords: mastered.length };
             }, [currentWords, virtualDate]);
 
+            const dueReviewsPreview = useMemo(() => [...dueReviewsTotal].sort(() => 0.5 - Math.random()).slice(0, settings.maxReviewsPerBatch), [dueReviewsTotal, settings]);
+            const reviveWordsPreview = useMemo(() => [...failedWordsTotal].sort(() => 0.5 - Math.random()).slice(0, 3), [failedWordsTotal]);
+            const newWordsPreview = useMemo(() => {
+                return currentBatches === 0 ? [...newWordsAvailable].sort(() => 0.5 - Math.random()).slice(0, settings.newWordsPerBatch) : [];
+            }, [currentBatches, newWordsAvailable, settings]);
+
+            const dashboardQueueTotal = useMemo(() => {
+                return [...dueReviewsPreview, ...reviveWordsPreview, ...newWordsPreview];
+            }, [dueReviewsPreview, reviveWordsPreview, newWordsPreview]);
+
             // --- 智能與批次匯入 ---
             const handleSmartImport = async (rawText) => {
                 if (!rawText.trim()) return false;
@@ -229,7 +269,6 @@
                             const transMatch = content.match(/([\u4e00-\u9fa5]+[^\w\s]*)/);
                             const translation = transMatch ? transMatch[1].replace(/\s+/g, '') : '無翻譯';
 
-                            // 防重複比對
                             if (word.length > 0 && !existingWordsSet.has(word.toLowerCase())) {
                                 currentMaxId++;
                                 newWords.push({ id: currentMaxId, word, pos, translation, category: currentUnit, batchId });
@@ -336,6 +375,20 @@
                 }
             };
 
+            // --- 嫁衣神功：散功重修 ---
+            const handleRebirth = async () => {
+                if (currentUser.score < 10000) {
+                    return alert("修為不足！至少需要達到【結丹】境界才能承受散功重修的反噬！");
+                }
+                if (!window.confirm(`⚠️ 警告：散功重修 (嫁衣神功)\n\n這將會散去你現在所有的修為積分 (歸零)，但你將獲得【轉世印記】！\n未來的每一次戰鬥，你將獲得永久 50% 的積分加成！\n轉世次數越多，修煉越快，這是突破凡人極限、面對 8000 單字的唯一方法。\n\n你確定要散功重修嗎？`)) return;
+
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUserId), {
+                    score: 0,
+                    rebirth: (currentUser.rebirth || 0) + 1
+                });
+                alert("🔥 散功重修成功！你已褪去舊凡體，獲得了強大的轉世加成！");
+            };
+
             // --- 戰鬥與特訓邏輯 ---
             const handleStartSession = async (reqMode = 'flashcard') => {
                 let isPractice = false;
@@ -350,13 +403,9 @@
                     });
                 }
 
-                // 亂數洗牌機制 (取代字母順序)
-                const shuffledDue = [...dueReviewsTotal].sort(() => 0.5 - Math.random()).slice(0, settings.maxReviewsPerBatch);
-                // 練功房不派發新單字
-                const shuffledNew = isPractice ? [] : [...newWordsAvailable].sort(() => 0.5 - Math.random()).slice(0, settings.newWordsPerBatch).map(w => ({...w, isNewBatch: true}));
-
-                // 混合後再次洗牌
-                const queue = [...shuffledDue, ...shuffledNew].sort(() => 0.5 - Math.random());
+                // 完全亂數洗牌
+                const queue = [...dueReviewsPreview, ...reviveWordsPreview.map(w => ({...w, isRevive: true})), ...(isPractice ? [] : newWordsPreview.map(w => ({...w, isNewBatch: true})))].sort(() => 0.5 - Math.random());
+                
                 if(queue.length === 0) return alert("目前沒有可練功的單字！");
 
                 setStudyMode(reqMode);
@@ -378,7 +427,7 @@
                 setStudyMode('flashcard');
                 setIsPracticeMode(false);
                 setIsReviveMode(true);
-                // 將剛才錯的題目洗牌後進入復活戰
+                // 亂數洗牌進入復活戰
                 setStudyQueue([...sessionMissedWords.current].sort(() => 0.5 - Math.random())); 
                 setCurrentCardIndex(0); 
                 setIsFlipped(false); 
@@ -393,7 +442,13 @@
 
             const submitSpell = () => {
                 const currentWord = studyQueue[currentCardIndex];
-                const isCorrect = spellInput.trim().toLowerCase() === currentWord.word.trim().toLowerCase();
+                // 智能比對：尋找任何翻譯相同、且字母排列形式相同、且輸入相符的單字 (同義詞相容)
+                const isCorrect = globalWords.some(w => 
+                    w.translation === currentWord.translation &&
+                    generateBlanks(w.word) === generateBlanks(currentWord.word) &&
+                    spellInput.trim().toLowerCase() === w.word.trim().toLowerCase()
+                );
+                
                 setRecallDuration(Date.now() - cardStartTime);
                 evaluateAnswer(isCorrect, true);
             };
@@ -404,7 +459,7 @@
                 
                 let newLevel = currentWord.level; 
                 let newStatus = currentWord.status === 'new' ? 'learning' : currentWord.status;
-                let grade, points = 0, comment; 
+                let grade, basePoints = 0, comment; 
                 let isOverdueBonus = false;
 
                 if (!isCorrect) {
@@ -413,38 +468,44 @@
                 }
 
                 if (isPracticeMode) {
-                    // 練功房不計分、不升降級
-                    if (isCorrect) { grade = 'S'; comment = '練功正確！'; points = 0; } 
-                    else { grade = 'D'; comment = '練功錯誤！'; points = 0; }
+                    // 練功房不計分
+                    if (isCorrect) { grade = 'S'; comment = '練功正確！'; basePoints = 0; } 
+                    else { grade = 'D'; comment = '練功錯誤！'; basePoints = 0; }
                 } else if (isReviveMode) {
-                    // 復活戰：對了回到 Level 1，錯了維持 Level 0，均不給分
-                    if (isCorrect) { grade = 'S'; comment = '復活成功！免除死刑！'; points = 0; newLevel = 1; } 
-                    else { grade = 'D'; comment = '復活失敗！乖乖重練！'; points = 0; newLevel = 0; }
+                    // 復活戰：對了回到 Level 1
+                    if (isCorrect) { grade = 'S'; comment = '復活成功！免除死刑！'; basePoints = 0; newLevel = 1; } 
+                    else { grade = 'D'; comment = '復活失敗！乖乖重練！'; basePoints = 0; newLevel = 0; }
                 } else {
                     // 正規戰鬥
                     let overdueDays = 0;
                     if (currentWord.nextReview) overdueDays = Math.floor((virtualDate - currentWord.nextReview) / (24 * 60 * 60 * 1000));
 
                     if (isCorrect) {
-                        if (fromSpelling || time <= 2000) { grade = 'S'; points = 50; comment = fromSpelling ? '完美拼寫！' : '秒殺！太神啦！'; newLevel = Math.min(INTERVALS.length - 1, newLevel + 2); } 
-                        else if (time <= 5000) { grade = 'A'; points = 30; comment = '非常流暢！'; newLevel = Math.min(INTERVALS.length - 1, newLevel + 1); } 
-                        else { grade = 'B'; points = 10; comment = '回想較久，再多練練！'; newLevel = Math.max(1, newLevel); }
+                        if (fromSpelling || time <= 2000) { grade = 'S'; basePoints = 50; comment = fromSpelling ? '完美拼寫！' : '秒殺！太神啦！'; newLevel = Math.min(INTERVALS.length - 1, newLevel + 2); } 
+                        else if (time <= 5000) { grade = 'A'; basePoints = 30; comment = '非常流暢！'; newLevel = Math.min(INTERVALS.length - 1, newLevel + 1); } 
+                        else { grade = 'B'; basePoints = 10; comment = '回想較久，再多練練！'; newLevel = Math.max(1, newLevel); }
                         
                         if (overdueDays >= 2 && (grade === 'S' || grade === 'A')) {
-                            points += 20; newLevel = Math.min(INTERVALS.length - 1, newLevel + 1); comment = '記憶力超強！(遲到紅利)'; isOverdueBonus = true;
+                            basePoints += 20; newLevel = Math.min(INTERVALS.length - 1, newLevel + 1); comment = '記憶力超強！(遲到紅利)'; isOverdueBonus = true;
                         }
                         if (newLevel === INTERVALS.length - 1) newStatus = 'mastered';
                     } else {
-                        if (time <= 2000 && !fromSpelling) { grade = 'C'; points = -5; comment = '太心急猜錯囉！'; newLevel = 0; } 
-                        else { grade = 'D'; points = -10; comment = fromSpelling ? '拼錯囉！' : '完全忘記，打回冷宮！'; newLevel = 0; }
+                        if (time <= 2000 && !fromSpelling) { grade = 'C'; basePoints = -5; comment = '太心急猜錯囉！'; newLevel = 0; } 
+                        else { grade = 'D'; basePoints = -10; comment = fromSpelling ? '拼錯囉！' : '完全忘記，打回冷宮！'; newLevel = 0; }
                     }
+                }
+
+                // 轉世重修加成計算
+                let actualPoints = basePoints;
+                if (basePoints > 0) {
+                    actualPoints = Math.round(basePoints * (1 + (currentUser.rebirth || 0) * 0.5));
                 }
 
                 const daysToAdd = INTERVALS[newLevel];
                 const nextReviewTime = virtualDate + (daysToAdd * 24 * 60 * 60 * 1000);
 
-                const payload = { points, newLevel, newStatus, nextReviewTime, currentWordId: currentWord.id };
-                setShowResult({ grade, points, comment, isCorrect, payload, isOverdueBonus });
+                const payload = { points: actualPoints, newLevel, newStatus, nextReviewTime, currentWordId: currentWord.id };
+                setShowResult({ grade, points: actualPoints, comment, isCorrect, payload, isOverdueBonus });
             };
 
             const proceedToNextCard = async () => {
@@ -467,7 +528,8 @@
                     setCurrentCardIndex(prev => prev + 1); setIsFlipped(false); setCardStartTime(Date.now()); setRecallDuration(null);
                 } else {
                     if (!isPracticeMode && !isReviveMode && sessionMistakesRef.current === 0) {
-                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUserId), { score: currentUser.score + payload.points + 100 });
+                        let bonus = Math.round(100 * (1 + (currentUser.rebirth || 0) * 0.5));
+                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUserId), { score: currentUser.score + payload.points + bonus });
                     }
                     setView('result'); 
                 }
@@ -502,17 +564,17 @@
                         <div className="inline-flex items-center justify-center w-20 h-20 md:w-28 md:h-28 bg-indigo-600 text-white rounded-full mb-6 shadow-lg shadow-indigo-200">
                             <Icon name="psychology" size={48} className="md:text-[64px]"/>
                         </div>
-                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-800 mb-4 tracking-tight">單字記憶傳說</h1>
-                        <p className="text-slate-500 font-medium md:text-xl">加入戰場，挑戰最強修仙境界</p>
+                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-800 mb-4 tracking-tight">修仙單字傳</h1>
+                        <p className="text-slate-500 font-medium md:text-xl">結丹化神，挑戰最強修仙境界</p>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-8">
                         <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8">
                             <h2 className="text-sm md:text-base font-bold text-slate-400 mb-6 uppercase tracking-wider flex items-center gap-2">
-                                <Icon name="group" size={20}/> 選擇現有英雄
+                                <Icon name="group" size={20}/> 選擇現有修士
                             </h2>
                             <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2">
-                                {users.length === 0 && <p className="text-slate-400 font-medium text-center py-4">尚無英雄，請先創建</p>}
+                                {users.length === 0 && <p className="text-slate-400 font-medium text-center py-4">尚無修士，請先創建</p>}
                                 {users.map(user => (
                                     <button key={user.id} onClick={() => { if (!user.password) { setCurrentUserId(user.id); setView('dashboard'); } else { setPasswordModalUser(user); setInputPassword(''); setPasswordError(false); } }} className="w-full flex items-center justify-between p-4 md:p-5 rounded-2xl border-2 border-slate-100 hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group">
                                         <div className="flex items-center gap-4">
@@ -520,7 +582,10 @@
                                                 {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} /> : <Icon name="person" size={28} />}
                                             </div>
                                             <div>
-                                                <div className="font-bold text-slate-800 text-lg md:text-xl">{user.name}</div>
+                                                <div className="font-bold text-slate-800 text-lg md:text-xl">
+                                                    {user.rebirth > 0 && <span className="text-amber-500 text-sm mr-1">【{user.rebirth}轉】</span>}
+                                                    {user.name}
+                                                </div>
                                                 <div className={`text-sm font-bold mt-1 ${getRankInfo(user.score).color}`}>{getRankInfo(user.score).title} ({user.score} PT)</div>
                                             </div>
                                         </div>
@@ -532,7 +597,7 @@
 
                         <div className="bg-slate-100 rounded-3xl p-6 md:p-8 flex flex-col justify-center">
                             <h2 className="text-sm md:text-base font-bold text-slate-400 mb-6 uppercase tracking-wider flex items-center gap-2">
-                                <Icon name="person_add" size={20} /> 創建新英雄
+                                <Icon name="person_add" size={20} /> 踏入修真界
                             </h2>
                             <div className="flex flex-col gap-4">
                                 <div className="flex justify-center mb-2">
@@ -544,9 +609,9 @@
                                         <div className="absolute -bottom-2 bg-slate-800 text-white text-[10px] px-3 py-1 rounded-full left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">上傳頭貼</div>
                                     </label>
                                 </div>
-                                <input type="text" placeholder="輸入英雄名稱..." value={newUserName} onChange={(e) => setNewUserName(e.target.value)} className="w-full px-5 py-4 text-base md:text-lg rounded-xl border-2 border-transparent focus:border-indigo-500 focus:outline-none shadow-sm" />
-                                <input type="password" placeholder="設定通關密碼..." value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} className="w-full px-5 py-4 text-base md:text-lg rounded-xl border-2 border-transparent focus:border-indigo-500 focus:outline-none shadow-sm" />
-                                <button onClick={async () => { if (!newUserName.trim() || !newUserPassword.trim()) return; const newUser = { id: Date.now().toString(), name: newUserName.trim(), password: newUserPassword.trim(), score: 0, totalReviewed: 0, lastStudyDate: null, dailyBatches: 0, avatar: newUserAvatar }; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', newUser.id), newUser); const initialStats = globalWords.map(w => ({ ...w, status: 'new', level: 0, nextReview: null })); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'wordStats', newUser.id), { words: initialStats }); setNewUserName(''); setNewUserPassword(''); setNewUserAvatar(null); setCurrentUserId(newUser.id); setView('dashboard'); }} disabled={!newUserName.trim() || !newUserPassword.trim()} className={`w-full text-white px-6 py-4 rounded-xl text-lg font-bold transition-all shadow-md ${newUserName.trim() && newUserPassword.trim() ? 'bg-slate-800 hover:bg-slate-900' : 'bg-slate-300 cursor-not-allowed'}`}>
+                                <input type="text" placeholder="輸入修士名稱..." value={newUserName} onChange={(e) => setNewUserName(e.target.value)} className="w-full px-5 py-4 text-base md:text-lg rounded-xl border-2 border-transparent focus:border-indigo-500 focus:outline-none shadow-sm" />
+                                <input type="password" placeholder="設定神識密碼..." value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} className="w-full px-5 py-4 text-base md:text-lg rounded-xl border-2 border-transparent focus:border-indigo-500 focus:outline-none shadow-sm" />
+                                <button onClick={async () => { if (!newUserName.trim() || !newUserPassword.trim()) return; const newUser = { id: Date.now().toString(), name: newUserName.trim(), password: newUserPassword.trim(), score: 0, rebirth: 0, totalReviewed: 0, lastStudyDate: null, dailyBatches: 0, avatar: newUserAvatar }; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', newUser.id), newUser); const initialStats = globalWords.map(w => ({ ...w, status: 'new', level: 0, nextReview: null })); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'wordStats', newUser.id), { words: initialStats }); setNewUserName(''); setNewUserPassword(''); setNewUserAvatar(null); setCurrentUserId(newUser.id); setView('dashboard'); }} disabled={!newUserName.trim() || !newUserPassword.trim()} className={`w-full text-white px-6 py-4 rounded-xl text-lg font-bold transition-all shadow-md ${newUserName.trim() && newUserPassword.trim() ? 'bg-slate-800 hover:bg-slate-900' : 'bg-slate-300 cursor-not-allowed'}`}>
                                     註冊並出發
                                 </button>
                             </div>
@@ -561,13 +626,13 @@
                         <div className="min-h-screen flex items-center justify-center p-6 animate-in fade-in">
                             <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-xl border border-slate-100 text-center">
                                 <Icon name="admin_panel_settings" size={64} className="text-indigo-600 mb-4" />
-                                <h2 className="text-2xl font-black text-slate-800 mb-2">家長控制台</h2>
-                                <p className="text-sm text-slate-500 mb-6">請輸入家長管理密碼以修改學習參數。<br/>(系統預設密碼為 <strong className="text-indigo-600">123456</strong>)</p>
-                                <input type="password" placeholder="輸入家長密碼" value={settingsUnlockCode} onChange={e => setSettingsUnlockCode(e.target.value)} onKeyDown={e => e.key === 'Enter' && (settingsUnlockCode === parentPassword ? (setIsSettingsUnlocked(true), setSettingsUnlockError(false)) : setSettingsUnlockError(true))} className={`w-full px-5 py-4 text-lg rounded-xl border-2 mb-2 focus:outline-none text-center ${settingsUnlockError ? 'border-rose-400 bg-rose-50' : 'border-slate-200 focus:border-indigo-500'}`} />
-                                {settingsUnlockError && <p className="text-rose-500 text-xs font-bold mb-4">密碼錯誤，請重試！</p>}
+                                <h2 className="text-2xl font-black text-slate-800 mb-2">掌門控制台</h2>
+                                <p className="text-sm text-slate-500 mb-6">請輸入掌門密碼以修改修煉法則。<br/>(系統預設密碼為 <strong className="text-indigo-600">123456</strong>)</p>
+                                <input type="password" placeholder="輸入掌門密碼" value={settingsUnlockCode} onChange={e => setSettingsUnlockCode(e.target.value)} onKeyDown={e => e.key === 'Enter' && (settingsUnlockCode === parentPassword ? (setIsSettingsUnlocked(true), setSettingsUnlockError(false)) : setSettingsUnlockError(true))} className={`w-full px-5 py-4 text-lg rounded-xl border-2 mb-2 focus:outline-none text-center ${settingsUnlockError ? 'border-rose-400 bg-rose-50' : 'border-slate-200 focus:border-indigo-500'}`} />
+                                {settingsUnlockError && <p className="text-rose-500 text-xs font-bold mb-4">陣法排斥，密碼錯誤！</p>}
                                 <div className="flex gap-3 mt-6">
                                     <button onClick={() => setView('dashboard')} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">返回</button>
-                                    <button onClick={() => settingsUnlockCode === parentPassword ? (setIsSettingsUnlocked(true), setSettingsUnlockError(false)) : setSettingsUnlockError(true)} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md">解鎖進入</button>
+                                    <button onClick={() => settingsUnlockCode === parentPassword ? (setIsSettingsUnlocked(true), setSettingsUnlockError(false)) : setSettingsUnlockError(true)} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md">破陣進入</button>
                                 </div>
                             </div>
                         </div>
@@ -580,17 +645,17 @@
                             <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100">
                                 <div className="flex items-center gap-3">
                                     <Icon name="settings_suggest" size={36} className="text-indigo-600" />
-                                    <h2 className="text-3xl font-black text-slate-800">家長控制台</h2>
+                                    <h2 className="text-3xl font-black text-slate-800">掌門控制台</h2>
                                 </div>
                                 <button onClick={() => setView('dashboard')} className="p-2 text-slate-400 hover:text-slate-800"><Icon name="close" size={28} /></button>
                             </div>
                             
                             <div className="grid md:grid-cols-2 gap-10 md:gap-16">
                                 <div>
-                                    <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2"><Icon name="tune" /> 學習參數調整</h3>
+                                    <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2"><Icon name="tune" /> 修煉法則調整</h3>
                                     <div className="space-y-8 mb-8">
                                         <div>
-                                            <label className="block text-sm font-bold text-slate-700 mb-2">每次挑戰釋放的新單字數 (配額)</label>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">每次出戰釋放的全新單字數 (配額)</label>
                                             <div className="flex items-center gap-4">
                                                 <input type="range" min="1" max="50" value={localSettings.newWordsPerBatch} onChange={e => setLocalSettings({...localSettings, newWordsPerBatch: parseInt(e.target.value)})} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                                                 <span className="font-black text-2xl text-indigo-600 w-12 text-right">{localSettings.newWordsPerBatch}</span>
@@ -611,14 +676,14 @@
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-bold text-slate-700 mb-2">變更家長管理密碼</label>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">變更掌門防護密碼</label>
                                             <input type="password" placeholder="若不更改請留白" value={newParentPwd} onChange={e => setNewParentPwd(e.target.value)} className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none" />
                                         </div>
                                     </div>
-                                    <button onClick={async () => { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'config'), { settings: localSettings, parentPassword: newParentPwd.trim() || parentPassword }); alert('⚙️ 家長設定已成功儲存並同步至雲端！'); setView('dashboard'); }} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-colors">儲存上述設定</button>
+                                    <button onClick={async () => { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system', 'config'), { settings: localSettings, parentPassword: newParentPwd.trim() || parentPassword }); alert('⚙️ 掌門法則已成功儲存並同步至雲端！'); setView('dashboard'); }} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-colors">儲存上述設定</button>
 
                                     <div className="mt-12 bg-slate-50 border border-slate-200 p-6 rounded-2xl">
-                                        <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><Icon name="vpn_key" /> 英雄管理 (重設密碼)</h3>
+                                        <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><Icon name="vpn_key" /> 修士管理 (重設神識密碼)</h3>
                                         <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
                                             {users.map(u => (
                                                 <div key={u.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
@@ -626,19 +691,19 @@
                                                     <button onClick={() => handleAdminResetPassword(u.id)} className="bg-rose-100 text-rose-600 font-bold px-3 py-1.5 rounded-lg text-sm hover:bg-rose-200 transition-colors">重設密碼</button>
                                                 </div>
                                             ))}
-                                            {users.length === 0 && <span className="text-slate-400 text-sm">尚無英雄</span>}
+                                            {users.length === 0 && <span className="text-slate-400 text-sm">尚無修士</span>}
                                         </div>
                                     </div>
                                 </div>
 
                                 <div>
                                     <div className="bg-amber-50 rounded-2xl p-6 border border-amber-100 h-full flex flex-col">
-                                        <h3 className="text-xl font-bold text-amber-800 mb-3 flex items-center gap-2"><Icon name="auto_fix_high" /> 智能 PDF 文字解析引擎</h3>
+                                        <h3 className="text-xl font-bold text-amber-800 mb-3 flex items-center gap-2"><Icon name="auto_fix_high" /> 天道 PDF 殘卷解析引擎</h3>
                                         <p className="text-sm text-amber-700 mb-4 leading-relaxed">不管 PDF 複製出來的文字左右欄有多亂，只要整坨貼在下方，AI 演算法就會自動梳理並匯入！</p>
                                         <textarea value={smartText} onChange={e => setSmartText(e.target.value)} placeholder="請直接從 PDF 複製文字並貼在這裡..." className="flex-1 w-full p-4 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white text-sm text-slate-600 resize-none min-h-[200px] mb-4"></textarea>
-                                        <button onClick={async () => { setIsImporting(true); const count = await handleSmartImport(smartText); if (count > 0) { alert(`🎉 神奇！成功萃取出 ${count} 個新單字！`); setSmartText(''); } else if (count === 0) { alert('匯入的單字都已經存在了喔！'); } else { alert('⚠️ 找不到符合格式的單字。'); } setIsImporting(false); }} disabled={isImporting || !smartText.trim()} className={`w-full py-4 font-black text-white rounded-xl shadow-md transition-colors flex justify-center items-center gap-2 ${isImporting || !smartText.trim() ? 'bg-amber-300 cursor-not-allowed' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'}`}>
+                                        <button onClick={async () => { setIsImporting(true); const count = await handleSmartImport(smartText); if (count > 0) { alert(`🎉 神奇！成功萃取出 ${count} 個新單字法寶！`); setSmartText(''); } else if (count === 0) { alert('匯入的單字都已經存在了喔！'); } else { alert('⚠️ 找不到符合天道格式的單字。'); } setIsImporting(false); }} disabled={isImporting || !smartText.trim()} className={`w-full py-4 font-black text-white rounded-xl shadow-md transition-colors flex justify-center items-center gap-2 ${isImporting || !smartText.trim() ? 'bg-amber-300 cursor-not-allowed' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'}`}>
                                             {isImporting ? <Icon name="hourglass_empty" className="animate-spin" /> : <Icon name="magic_button" />}
-                                            {isImporting ? '演算法解析中...' : '一鍵智能萃取單字'}
+                                            {isImporting ? '陣法解析中...' : '一鍵智能萃取單字'}
                                         </button>
                                     </div>
                                 </div>
@@ -648,14 +713,79 @@
                 );
             };
 
+            const renderLobby = () => {
+                const rankedUsers = [...users].sort((a, b) => b.score - a.score).map(u => {
+                    const uWords = userWordStats[u.id] || [];
+                    const mastered = uWords.filter(w => w.status === 'mastered').length;
+                    return { ...u, masteredCount: mastered };
+                });
+
+                return (
+                    <div className="max-w-md md:max-w-3xl lg:max-w-4xl mx-auto p-6 md:p-8 animate-in fade-in duration-300 pb-32 overflow-hidden">
+                        <div className="mb-8 md:mb-12 mt-4 text-center">
+                            <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full mb-4 shadow-sm border border-yellow-200"><Icon name="military_tech" size={40} /></div>
+                            <h2 className="text-3xl md:text-4xl font-black text-slate-800 mb-2">仙榜大廳</h2>
+                            <p className="text-slate-500 font-medium md:text-lg">踏天之路，誰與爭鋒</p>
+                        </div>
+
+                        <div className="relative pt-16 pb-24">
+                            <div className="absolute left-1/2 top-0 bottom-0 w-3 md:w-4 bg-gradient-to-b from-indigo-200 via-emerald-200 to-amber-100 transform -translate-x-1/2 rounded-full border-2 border-white shadow-inner"></div>
+                            <div className="absolute left-1/2 top-0 transform -translate-x-1/2 -translate-y-1/2 z-20">
+                                <div className="bg-indigo-600 p-3 rounded-full border-4 border-white shadow-lg text-white"><Icon name="flag" size={32} /></div>
+                            </div>
+
+                            {rankedUsers.map((u, i) => {
+                                const isLeft = i % 2 === 0;
+                                return (
+                                    <div key={u.id} className={`relative flex items-center w-full mb-12 z-10 ${isLeft ? 'justify-start' : 'justify-end'}`}>
+                                        <div className="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 md:w-8 md:h-8 bg-white border-4 border-indigo-500 rounded-full shadow-md z-20 overflow-hidden">
+                                            {u.avatar && <img src={u.avatar} className="w-full h-full object-cover opacity-80" alt="avatar" />}
+                                        </div>
+                                        <div className={`w-[45%] md:w-[42%] flex ${isLeft ? 'justify-end pr-4 md:pr-8' : 'justify-start pl-4 md:pl-8'}`}>
+                                            <div className={`w-full max-w-sm bg-white p-4 md:p-5 rounded-3xl shadow-lg border-2 ${u.id === currentUserId ? 'border-indigo-400 shadow-indigo-100 scale-105' : 'border-slate-100'} relative transform transition hover:scale-105`}>
+                                                {i === 0 && <Icon name="workspace_premium" className="absolute -top-5 -right-3 md:-right-5 text-yellow-400 drop-shadow-md bg-white rounded-full" size={48} />}
+                                                {i === 1 && <Icon name="military_tech" className="absolute -top-4 -right-2 md:-right-4 text-slate-300 drop-shadow-sm bg-white rounded-full" size={40} />}
+                                                {i === 2 && <Icon name="military_tech" className="absolute -top-4 -right-2 md:-right-4 text-orange-400 drop-shadow-sm bg-white rounded-full" size={40} />}
+                                                
+                                                <div className="flex items-center gap-3 mb-1 md:mb-2">
+                                                    {u.avatar ? <img src={u.avatar} className="w-10 h-10 md:w-14 md:h-14 flex-shrink-0 rounded-full object-cover border-2 border-slate-100" alt={u.name} /> : <div className={`w-10 h-10 md:w-14 md:h-14 flex-shrink-0 rounded-full flex items-center justify-center ${getRankInfo(u.score).bg} border-2 border-slate-100`}><Icon name="person" className={getRankInfo(u.score).color} /></div>}
+                                                    <div className="overflow-hidden">
+                                                        <div className="font-black text-lg md:text-2xl text-slate-800 truncate">
+                                                            {u.rebirth > 0 && <span className="text-amber-500 text-sm md:text-lg mr-1">【{u.rebirth}轉】</span>}
+                                                            {u.name}
+                                                        </div>
+                                                        <div className={`text-sm md:text-base font-bold ${getRankInfo(u.score).color}`}>{getRankInfo(u.score).title}</div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="mt-2 w-full bg-slate-100 rounded-full h-1.5 mb-2 overflow-hidden">
+                                                    <div className="bg-indigo-400 h-1.5 rounded-full" style={{ width: getRankInfo(u.score).nextScore ? `${Math.min(100, (u.score / getRankInfo(u.score).nextScore) * 100)}%` : '100%' }}></div>
+                                                </div>
+                                                <div className="text-right text-[10px] text-slate-400 font-bold mb-3">{u.score} / {getRankInfo(u.score).nextScore || 'MAX'} PT</div>
+
+                                                <div className="flex gap-2 mt-3 text-[10px] md:text-xs text-slate-500 font-bold bg-slate-50 p-2 rounded-xl flex-wrap">
+                                                    <span className="flex items-center gap-1"><Icon name="star" size={14} className="text-amber-400"/> {u.masteredCount} 精通</span>
+                                                    <span className="flex items-center gap-1"><Icon name="sports_martial_arts" size={14} className="text-indigo-400" /> {u.totalReviewed || 0} 戰鬥</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            };
+
             const renderDashboard = () => {
                 const rank = getRankInfo(currentUser.score);
                 const canDoMoreRounds = currentBatches < settings.maxBatchesPerDay;
+                const canRebirth = currentUser.score >= 10000; // 達到金丹期即可散功重修
                 
                 return (
                     <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto p-6 md:p-8 animate-in fade-in duration-300 pb-28">
                         <div className="flex items-center justify-between mb-8 md:mb-12 bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-slate-100 relative">
-                            <button onClick={() => { setSettingsUnlockCode(''); setSettingsUnlockError(false); setIsSettingsUnlocked(false); setView('settings'); }} className="absolute top-4 right-16 md:top-6 md:right-20 p-2 text-slate-300 hover:text-indigo-600 transition-colors" title="家長設定">
+                            <button onClick={() => { setSettingsUnlockCode(''); setSettingsUnlockError(false); setIsSettingsUnlocked(false); setView('settings'); }} className="absolute top-4 right-16 md:top-6 md:right-20 p-2 text-slate-300 hover:text-indigo-600 transition-colors" title="掌門設定">
                                 <Icon name="settings" size={28} />
                             </button>
                             <button onClick={() => { setCurrentUserId(null); setView('login'); }} className="absolute top-4 right-4 md:top-6 md:right-6 p-2 text-slate-300 hover:text-rose-500 transition-colors" title="登出">
@@ -670,12 +800,31 @@
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"><Icon name="photo_camera" size={28} className="text-slate-800 drop-shadow-md" /></div>
                                     <input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = async () => { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUserId), { avatar: reader.result }); }; reader.readAsDataURL(file); } }} />
                                 </label>
-                                <div>
-                                    <h1 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">{currentUser.name}</h1>
+                                <div className="w-full pr-16 md:pr-24">
+                                    <h1 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">
+                                        {currentUser.rebirth > 0 && <span className="text-amber-500 text-xl md:text-3xl mr-1">【{currentUser.rebirth}轉】</span>}
+                                        {currentUser.name}
+                                    </h1>
                                     <span className={`text-sm md:text-base font-bold px-3 py-1 rounded-full mt-2 inline-block ${rank.bg} ${rank.color}`}>{rank.title} | {currentUser.score} PT</span>
+                                    
+                                    <div className="mt-2 w-full max-w-xs bg-slate-100 rounded-full h-1.5 mb-1 overflow-hidden">
+                                        <div className="bg-indigo-400 h-1.5 rounded-full transition-all duration-1000" style={{ width: rank.nextScore ? `${Math.min(100, (currentUser.score / rank.nextScore) * 100)}%` : '100%' }}></div>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 font-bold">距離下一境界：{rank.nextScore ? rank.nextScore - currentUser.score : 0} PT</div>
                                 </div>
                             </div>
                         </div>
+
+                        {/* 嫁衣神功按鈕 (隱藏條件：結丹期以上解鎖) */}
+                        {canRebirth && (
+                            <button onClick={handleRebirth} className="w-full mb-8 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white p-4 rounded-2xl shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-3 animate-in fade-in zoom-in">
+                                <Icon name="local_fire_department" size={32} className="animate-pulse" />
+                                <div className="text-left">
+                                    <div className="text-lg font-black">嫁衣神功：散功重修</div>
+                                    <div className="text-xs font-medium opacity-90">散盡當前積分，換取未來永久 +50% 積分加成，突破凡人極限！</div>
+                                </div>
+                            </button>
+                        )}
 
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-8">
                             <div className="bg-indigo-50 rounded-3xl p-6 text-center shadow-sm border border-indigo-100 relative overflow-hidden flex flex-col justify-center">
@@ -685,7 +834,7 @@
                             </div>
                             <div className="bg-rose-50 rounded-3xl p-6 text-center shadow-sm border border-rose-100 relative flex flex-col justify-center">
                                 <div className="text-5xl md:text-6xl font-black text-rose-600 mb-2">{failedWordsTotal.length}</div>
-                                <div className="text-sm md:text-base font-bold text-rose-800 flex items-center justify-center gap-1"><Icon name="healing" size={18} /> 冷宮總數</div>
+                                <div className="text-sm md:text-base font-bold text-rose-800 flex items-center justify-center gap-1"><Icon name="healing" size={18} /> 走火入魔 (冷宮)</div>
                             </div>
                             <div className="bg-amber-50 rounded-3xl p-6 text-center shadow-sm border border-amber-100 col-span-2 md:col-span-1 flex flex-col justify-center">
                                 <div className="text-5xl md:text-6xl font-black text-amber-600 mb-2">{currentBatches} / {settings.maxBatchesPerDay}</div>
@@ -694,7 +843,7 @@
                         </div>
 
                         {dashboardQueueTotal.length === 0 ? (
-                            <div className="w-full py-6 rounded-2xl text-xl font-bold bg-slate-200 text-slate-400 flex flex-col items-center justify-center gap-1 mb-8">全數殲滅，太神啦！</div>
+                            <div className="w-full py-6 rounded-2xl text-xl font-bold bg-slate-200 text-slate-400 flex flex-col items-center justify-center gap-1 mb-8">瓶頸已破，今日圓滿！</div>
                         ) : (
                             <div className="grid md:grid-cols-2 gap-4 mb-8">
                                 <button onClick={() => handleStartSession('flashcard')} className={`w-full py-5 md:py-6 rounded-2xl text-xl font-black shadow-lg transition-transform hover:scale-[1.02] flex items-center justify-center gap-2 ${canDoMoreRounds ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white' : 'bg-slate-300 text-slate-700'}`}>
@@ -747,7 +896,10 @@
                                         <div className="text-xl md:text-2xl font-bold text-slate-800 mb-2">{showResult.comment}</div>
                                         
                                         {!isPracticeMode && !isReviveMode && (
-                                            <div className={`text-2xl md:text-3xl font-black mb-2 ${showResult.points > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{showResult.points > 0 ? '+' : ''}{showResult.points} PT</div>
+                                            <div className={`text-2xl md:text-3xl font-black mb-2 ${showResult.points > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                {showResult.points > 0 ? '+' : ''}{showResult.points} PT
+                                                {currentUser.rebirth > 0 && showResult.points > 0 && <span className="text-sm text-amber-500 ml-2">(含加成)</span>}
+                                            </div>
                                         )}
                                         {isReviveMode && <div className="text-lg font-bold text-slate-500 mb-2">0 PT (復活不計分)</div>}
                                         
@@ -756,11 +908,10 @@
                                         {studyMode === 'spelling' && !showResult.isCorrect && (
                                             <div className="mt-4 bg-rose-50 border border-rose-200 p-3 rounded-xl">
                                                 <div className="text-sm text-rose-500 font-bold mb-1">正確答案應為：</div>
-                                                <div className="text-2xl font-black text-rose-700">{payload?.currentWordId ? currentWords.find(w=>w.id===payload.currentWordId)?.word : ''}</div>
+                                                <div className="text-2xl font-black text-rose-700">{showResult.payload?.currentWordId ? currentWords.find(w=>w.id===showResult.payload.currentWordId)?.word : ''}</div>
                                             </div>
                                         )}
 
-                                        {/* 強制下一題按鈕 */}
                                         <button onClick={proceedToNextCard} className="mt-8 bg-indigo-600 text-white font-black py-4 px-12 rounded-2xl text-xl w-full hover:bg-indigo-700 hover:scale-105 transition-transform shadow-lg flex justify-center items-center gap-2">
                                             下一題 <Icon name="arrow_forward" />
                                         </button>
@@ -769,7 +920,6 @@
                             )}
 
                             {studyMode === 'spelling' ? (
-                                /* 拼寫模式卡片 */
                                 <div className={`w-full bg-white p-8 rounded-[2rem] md:rounded-[3rem] shadow-xl h-[60vh] md:h-[500px] flex flex-col items-center justify-center transition-all ${showResult ? 'opacity-50 scale-95 blur-sm' : ''}`}>
                                     <h3 className="text-4xl md:text-6xl font-black text-slate-800 mb-4">{currentWord.translation}</h3>
                                     <span className="bg-indigo-50 text-indigo-600 font-bold px-4 py-1.5 rounded-lg mb-8">{currentWord.pos}</span>
@@ -781,7 +931,6 @@
                                     <button onClick={submitSpell} disabled={!spellInput.trim()} className={`font-bold py-4 px-10 rounded-xl text-xl shadow-md transition-colors ${spellInput.trim() ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>確認答案</button>
                                 </div>
                             ) : (
-                                /* 翻牌模式卡片 */
                                 <div onClick={() => { if (!isFlipped && !showResult) { setIsFlipped(true); setRecallDuration(Date.now() - cardStartTime); } }} className={`w-full h-[60vh] md:h-[500px] lg:h-[600px] rounded-[2rem] md:rounded-[3rem] shadow-xl transition-all duration-500 flex flex-col items-center justify-center p-8 md:p-12 text-center relative overflow-hidden preserve-3d ${isFlipped ? 'bg-white border-4 border-indigo-100' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'} ${showResult ? 'opacity-50 scale-95 blur-sm' : ''}`}>
                                     {!isFlipped ? (
                                         <div className="animate-in fade-in duration-300 flex flex-col items-center justify-center w-full h-full">
@@ -801,19 +950,18 @@
                             )}
                         </div>
 
-                        {/* 翻牌模式的對錯按鈕 */}
                         {studyMode === 'flashcard' && (
                             <div className={`mt-8 md:mt-12 mb-10 transition-all duration-300 ${isFlipped && !showResult ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
                                 <div className="grid grid-cols-2 gap-4 md:gap-8 max-w-2xl mx-auto">
                                     <button onClick={() => evaluateAnswer(false, false)} className="flex flex-col items-center justify-center p-6 md:p-8 rounded-3xl bg-white border-2 border-rose-100 text-rose-600 hover:bg-rose-50 hover:border-rose-300 hover:shadow-md transition-all active:scale-95">
                                         <Icon name="cancel" size={40} className="mb-3 md:mb-4" />
                                         <span className="text-xl md:text-2xl font-black">答錯了</span>
-                                        <span className="text-sm md:text-base font-medium text-rose-400 mt-2">打回冷宮</span>
+                                        <span className="text-sm md:text-base font-medium text-rose-400 mt-2">走火入魔</span>
                                     </button>
                                     <button onClick={() => evaluateAnswer(true, false)} className="flex flex-col items-center justify-center p-6 md:p-8 rounded-3xl bg-white border-2 border-emerald-100 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-md transition-all active:scale-95">
                                         <Icon name="check_circle" size={40} className="mb-3 md:mb-4" />
                                         <span className="text-xl md:text-2xl font-black">答對了</span>
-                                        <span className="text-sm md:text-base font-medium text-emerald-400 mt-2">結算給分</span>
+                                        <span className="text-sm md:text-base font-medium text-emerald-400 mt-2">結算修為</span>
                                     </button>
                                 </div>
                             </div>
@@ -848,15 +996,15 @@
                         {isPerfect ? (
                             <div className="bg-amber-50 w-full p-8 md:p-12 rounded-[3rem] shadow-xl border-4 border-amber-200 mb-8">
                                 <Icon name="workspace_premium" size={100} className="text-yellow-400 drop-shadow-lg mx-auto mb-6 animate-bounce" />
-                                <h1 className="text-4xl md:text-5xl font-black text-amber-600 mb-2">完美通關！</h1>
-                                <p className="text-lg font-bold text-amber-500 mb-6">神級記憶力，零失誤達成</p>
-                                <div className="bg-white inline-block px-6 py-3 rounded-full shadow-sm font-black text-2xl text-emerald-500">+100 完美積分</div>
+                                <h1 className="text-4xl md:text-5xl font-black text-amber-600 mb-2">境界穩固！</h1>
+                                <p className="text-lg font-bold text-amber-500 mb-6">神識敏銳，零失誤達成</p>
+                                <div className="bg-white inline-block px-6 py-3 rounded-full shadow-sm font-black text-2xl text-emerald-500">+ {Math.round(100 * (1 + (currentUser.rebirth || 0) * 0.5))} 完美修為</div>
                             </div>
                         ) : (
                             <div className="bg-slate-100 w-full p-8 md:p-12 rounded-[3rem] shadow-md border-4 border-slate-200 mb-8">
                                 <Icon name="health_and_safety" size={80} className="text-indigo-400 mx-auto mb-6" />
-                                <h1 className="text-3xl md:text-4xl font-black text-slate-700 mb-2">戰鬥結算</h1>
-                                <p className="text-lg font-bold text-slate-500 mb-6">跌倒了再站起來，下次會更好！</p>
+                                <h1 className="text-3xl md:text-4xl font-black text-slate-700 mb-2">出關結算</h1>
+                                <p className="text-lg font-bold text-slate-500 mb-6">修道之路多險阻，下次會更好！</p>
                                 <div className="bg-white inline-block px-6 py-3 rounded-full shadow-sm font-black text-xl text-rose-500">失誤次數: {mistakes} 題</div>
                             </div>
                         )}
@@ -877,7 +1025,7 @@
                             </div>
                         ) : (
                             <div className="w-full">
-                                <p className="text-slate-400 font-medium mb-6 px-4">失誤超過 3 題，無緣敗部復活！休息一下明天再來吧。</p>
+                                <p className="text-slate-400 font-medium mb-6 px-4">失誤超過 3 題，心魔入體，無緣復活！休息一下明天再來吧。</p>
                                 <button onClick={() => setView('dashboard')} className="w-full bg-slate-800 text-white py-5 rounded-2xl text-xl font-black shadow-lg hover:bg-slate-900 transition-colors flex justify-center items-center gap-2">
                                     <Icon name="home" size={28} /> 返回主堡
                                 </button>
@@ -893,11 +1041,11 @@
                     <div className="flex justify-end mb-4">
                         {!isLibraryAdmin ? (
                             <button onClick={() => setShowLibraryLogin(!showLibraryLogin)} className="text-sm font-bold text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition-colors bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-100">
-                                <Icon name="lock" size={16} /> 進入管理員模式 (擴充題庫)
+                                <Icon name="lock" size={16} /> 進入掌門模式 (擴充題庫)
                             </button>
                         ) : (
                             <button onClick={() => setIsLibraryAdmin(false)} className="text-sm font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors bg-emerald-50 px-3 py-1.5 rounded-full shadow-sm border border-emerald-100">
-                                <Icon name="lock_open" size={16} /> 已解鎖管理員模式 (點擊鎖定)
+                                <Icon name="lock_open" size={16} /> 已解鎖掌門模式 (點擊鎖定)
                             </button>
                         )}
                     </div>
@@ -906,7 +1054,7 @@
                         <div className="bg-white border border-slate-200 p-4 rounded-2xl mb-6 flex flex-col md:flex-row gap-3 animate-in fade-in slide-in-from-top-4 shadow-md max-w-md ml-auto">
                             <input 
                                 type="password" 
-                                placeholder="輸入家長/管理員密碼..." 
+                                placeholder="輸入掌門密碼..." 
                                 value={libraryUnlockCode} 
                                 onChange={e=>setLibraryUnlockCode(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && (libraryUnlockCode === parentPassword ? (setIsLibraryAdmin(true), setShowLibraryLogin(false), setLibraryUnlockCode(''), setLibraryUnlockError(false)) : setLibraryUnlockError(true))}
@@ -914,7 +1062,7 @@
                             />
                             <div className="flex gap-2">
                                 <button onClick={() => setShowLibraryLogin(false)} className="bg-slate-100 text-slate-600 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-200">取消</button>
-                                <button onClick={() => libraryUnlockCode === parentPassword ? (setIsLibraryAdmin(true), setShowLibraryLogin(false), setLibraryUnlockCode(''), setLibraryUnlockError(false)) : setLibraryUnlockError(true)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-indigo-700">解鎖</button>
+                                <button onClick={() => libraryUnlockCode === parentPassword ? (setIsLibraryAdmin(true), setShowLibraryLogin(false), setLibraryUnlockCode(''), setLibraryUnlockError(false)) : setLibraryUnlockError(true)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-indigo-700">破陣</button>
                             </div>
                         </div>
                     )}
@@ -922,12 +1070,13 @@
                     {isLibraryAdmin && (
                         <div className="bg-indigo-50 border-2 border-indigo-100 rounded-3xl p-6 md:p-8 mb-8 shadow-sm animate-in fade-in zoom-in-95">
                             <h3 className="text-xl md:text-2xl font-black text-indigo-800 mb-6 flex items-center gap-2">
-                                <Icon name="admin_panel_settings" size={28} /> 管理員擴充專區
+                                <Icon name="admin_panel_settings" size={28} /> 掌門擴充專區
                             </h3>
                             
                             <div className="grid md:grid-cols-3 gap-6">
+                                {/* 手動新增單筆 */}
                                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 col-span-1 md:col-span-2">
-                                    <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Icon name="edit_square" size={20} className="text-indigo-500"/> 手動新增單筆</h4>
+                                    <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Icon name="edit_square" size={20} className="text-indigo-500"/> 手動新增法寶 (單字)</h4>
                                     <div className="space-y-3">
                                         <div className="flex flex-col md:flex-row gap-2">
                                             <input type="text" placeholder="單字 (必填)" value={manualWord.word} onChange={e=>setManualWord({...manualWord, word: e.target.value})} className="w-full md:w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
@@ -938,15 +1087,16 @@
                                             <input type="text" placeholder="單元 (如 Unit 01)" value={manualWord.category} onChange={e=>setManualWord({...manualWord, category: e.target.value})} className="w-full md:w-1/2 px-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:border-indigo-300 focus:outline-none" />
                                         </div>
                                         <button onClick={handleManualAddWord} className="w-full bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-900 transition-colors mt-2 shadow-md">
-                                            確認新增單字
+                                            確認新增法寶
                                         </button>
                                     </div>
                                 </div>
 
+                                {/* 大量匯入 (CSV) */}
                                 <div className="bg-indigo-600 p-5 rounded-2xl shadow-sm flex flex-col justify-between text-white relative overflow-hidden col-span-1">
                                     <div className="absolute -bottom-6 -right-6 text-indigo-400 opacity-30"><Icon name="upload_file" size={120} /></div>
                                     <div className="relative z-10">
-                                        <h4 className="font-black mb-2 flex items-center gap-2"><Icon name="upload_file" size={20}/> 大量匯入 (CSV)</h4>
+                                        <h4 className="font-black mb-2 flex items-center gap-2"><Icon name="upload_file" size={20}/> 萬劍歸宗 (CSV 匯入)</h4>
                                         <p className="text-xs text-indigo-100 mb-6 leading-relaxed">
                                             將 Excel 另存為 .csv 檔匯入，自動過濾重複。<br/>
                                             格式：<span className="font-mono bg-indigo-800 text-white px-1.5 py-0.5 rounded">單字,詞性,中文,分類</span>
@@ -959,9 +1109,10 @@
                                 </div>
                             </div>
 
+                            {/* 一鍵復原上次匯入 */}
                             <div className="mt-6 bg-amber-50 border border-amber-200 p-5 rounded-2xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
                                 <div>
-                                    <h4 className="font-bold text-amber-800 mb-1 flex items-center gap-2"><Icon name="undo" size={20}/> 復原上次匯入</h4>
+                                    <h4 className="font-bold text-amber-800 mb-1 flex items-center gap-2"><Icon name="undo" size={20}/> 時光倒流 (復原上次匯入)</h4>
                                     <p className="text-xs text-amber-600">如果剛才大量匯入發生錯誤，點擊此按鈕可精準抽掉上一批匯入的單字。</p>
                                 </div>
                                 <button onClick={handleUndoLastImport} disabled={!lastImportBatchId} className={`w-full md:w-auto font-bold py-3 px-6 rounded-xl transition-colors shadow-md text-sm whitespace-nowrap ${lastImportBatchId ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-amber-200 text-amber-100 cursor-not-allowed'}`}>
@@ -973,8 +1124,8 @@
 
                     <div className="mb-8 mt-4 flex items-end justify-between">
                         <div>
-                            <h2 className="text-3xl md:text-4xl font-black text-slate-800 mb-2">全字庫檢視</h2>
-                            <p className="text-slate-500 font-medium md:text-lg">目前總字數: <span className="text-indigo-600 font-bold">{globalWords.length}</span> 個 / 目標: 2000 個</p>
+                            <h2 className="text-3xl md:text-4xl font-black text-slate-800 mb-2">法寶庫 (全字庫)</h2>
+                            <p className="text-slate-500 font-medium md:text-lg">目前總字數: <span className="text-indigo-600 font-bold">{globalWords.length}</span> 個 / 終極目標: 8000 個</p>
                         </div>
                     </div>
 
@@ -985,8 +1136,8 @@
                                     <div className="font-bold text-slate-800 text-xl md:text-2xl flex items-center gap-2 mb-2">
                                         {word.word}
                                         {word.status === 'mastered' && <Icon name="star" size={20} className="text-amber-400 fill-amber-400" />}
-                                        {word.status === 'new' && <span className="bg-slate-100 text-slate-400 text-[10px] md:text-xs px-2 py-0.5 rounded font-black uppercase">尚未解鎖</span>}
-                                        {word.level === 0 && word.status === 'learning' && <span className="bg-rose-100 text-rose-600 text-[10px] md:text-xs px-2 py-0.5 rounded font-black uppercase">需急救</span>}
+                                        {word.status === 'new' && <span className="bg-slate-100 text-slate-400 text-[10px] md:text-xs px-2 py-0.5 rounded font-black uppercase">尚未煉化</span>}
+                                        {word.level === 0 && word.status === 'learning' && <span className="bg-rose-100 text-rose-600 text-[10px] md:text-xs px-2 py-0.5 rounded font-black uppercase">走火入魔</span>}
                                     </div>
                                     <div className="text-sm md:text-base text-slate-500 font-medium"><span className="text-indigo-500 mr-2 bg-indigo-50 px-2 py-0.5 rounded">{word.pos}</span>{word.translation}</div>
                                 </div>
@@ -1023,8 +1174,8 @@
                         <div className="fixed bottom-0 left-0 right-0 pointer-events-none flex justify-center z-40 pb-4 md:pb-8 px-4">
                             <div className="bg-white/95 backdrop-blur-md border border-slate-200 p-2 px-4 md:px-8 flex justify-between items-center w-full max-w-md md:max-w-xl rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] pointer-events-auto">
                                 <button onClick={() => setView('dashboard')} className={`flex-1 flex flex-col items-center p-2 md:p-3 transition-all duration-300 rounded-2xl ${view === 'dashboard' ? 'text-indigo-600 bg-indigo-50 scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Icon name="psychology" size={28} /><span className="text-[10px] md:text-xs font-black mt-1">主堡</span></button>
-                                <button onClick={() => setView('lobby')} className={`flex-1 flex flex-col items-center p-2 md:p-3 transition-all duration-300 rounded-2xl mx-1 ${view === 'lobby' ? 'text-indigo-600 bg-indigo-50 scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Icon name="landscape" size={28} /><span className="text-[10px] md:text-xs font-black mt-1">大廳</span></button>
-                                <button onClick={() => setView('library')} className={`flex-1 flex flex-col items-center p-2 md:p-3 transition-all duration-300 rounded-2xl ${view === 'library' ? 'text-indigo-600 bg-indigo-50 scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Icon name="menu_book" size={28} /><span className="text-[10px] md:text-xs font-black mt-1">兵器庫</span></button>
+                                <button onClick={() => setView('lobby')} className={`flex-1 flex flex-col items-center p-2 md:p-3 transition-all duration-300 rounded-2xl mx-1 ${view === 'lobby' ? 'text-indigo-600 bg-indigo-50 scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Icon name="landscape" size={28} /><span className="text-[10px] md:text-xs font-black mt-1">仙榜</span></button>
+                                <button onClick={() => setView('library')} className={`flex-1 flex flex-col items-center p-2 md:p-3 transition-all duration-300 rounded-2xl ${view === 'library' ? 'text-indigo-600 bg-indigo-50 scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}><Icon name="menu_book" size={28} /><span className="text-[10px] md:text-xs font-black mt-1">法寶庫</span></button>
                             </div>
                         </div>
                     )}
@@ -1053,7 +1204,7 @@
                             
                             // 👇 ========================================================
                             const myFirebaseConfig = {
-                                apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
+                             apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
   authDomain: "vocab-2000.firebaseapp.com",
   projectId: "vocab-2000",
   storageBucket: "vocab-2000.firebasestorage.app",
