@@ -3,28 +3,26 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, updateDoc, deleteDoc, addDoc, query } from 'firebase/firestore';
 
-// --- 全域變數獲取 ---
+// --- Firebase 初始化 (遵循環境規範) ---
 const firebaseConfig = JSON.parse(__firebase_config);
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'vocab-legend-final';
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'vocab-legend-nirvana';
 
-// --- 仙逆修真境界 ---
+// --- 仙逆修真境界定義 (指數級) ---
 const RANKS_DATA = [
   { title: "凡人", min: 0, color: "#94a3b8" },
   { title: "凝氣期", min: 100, color: "#4ade80" },
-  { title: "築基期", min: 2000, color: "#60a5fa" },
-  { title: "結丹期", min: 10000, color: "#fbbf24" },
+  { title: "築基期", min: 3000, color: "#60a5fa" },
+  { title: "結丹期", min: 12000, color: "#fbbf24" },
   { title: "元嬰期", min: 50000, color: "#f87171" },
   { title: "化神期", min: 150000, color: "#c084fc" },
-  { title: "嬰變期", min: 400000, color: "#e879f9" },
-  { title: "問鼎期", min: 800000, color: "#f472b6" },
-  { title: "陰陽虛實", min: 1500000, color: "#cbd5e1" },
-  { title: "窺涅期", min: 3000000, color: "#38bdf8" },
-  { title: "淨涅期", min: 6000000, color: "#818cf8" },
-  { title: "碎涅期", min: 12000000, color: "#fb7185" },
-  { title: "空靈/空玄/空劫", min: 25000000, color: "#fbbf24" },
+  { title: "嬰變期", min: 450000, color: "#e879f9" },
+  { title: "問鼎期", min: 1000000, color: "#f472b6" },
+  { title: "陰陽虛實", min: 2500000, color: "#cbd5e1" },
+  { title: "窺涅/淨涅/碎涅", min: 6000000, color: "#fb7185" },
+  { title: "空靈/空玄/空劫", min: 20000000, color: "#f59e0b" },
   { title: "踏天境", min: 100000000, color: "#fbbf24", glow: true }
 ];
 
@@ -47,53 +45,85 @@ export default function App() {
     const [loading, setLoading] = useState(true);
     const [adminMode, setAdminMode] = useState(false);
     
-    // UI 訊息通知狀態 (取代 alert)
+    // UI 狀態
     const [message, setMessage] = useState(null);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiHint, setAiHint] = useState("");
 
-    // 裁切與挑戰狀態
+    // 裁切狀態
     const [cropSource, setCropSource] = useState(null);
     const [cropPos, setCropPos] = useState({ x: 0, y: 0, zoom: 1 });
-    const [currentChallenge, setCurrentChallenge] = useState(null);
-    const [challengeResult, setChallengeResult] = useState(null);
-    const [showAnswer, setShowAnswer] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [lastTouch, setLastTouch] = useState(null);
 
-    // --- 訊息彈窗功能 ---
-    const notify = (text, type = "info") => {
-        setMessage({ text, type });
-        setTimeout(() => setMessage(null), 3000);
+    // 挑戰狀態
+    const [currentChallenge, setCurrentChallenge] = useState(null);
+    const [challengeResult, setChallengeResult] = useState(null);
+    const [showAnswer, setShowAnswer] = useState(false);
+
+    // --- Gemini API 調用 (指數退避) ---
+    const callGemini = async (prompt) => {
+        const apiKey = ""; // 由環境自動處理
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        
+        const fetchWithRetry = async (retries = 0) => {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        systemInstruction: { parts: [{ text: "你是《仙逆》中的修仙導師，請用充滿仙氣、玄幻的口吻解釋英文單字，提供記憶法、同義詞。回答字數約100字內。" }] }
+                    })
+                });
+                if (!response.ok) throw new Error('API Error');
+                const result = await response.json();
+                return result.candidates?.[0]?.content?.parts?.[0]?.text || "仙人感應模糊，請稍後再試。";
+            } catch (err) {
+                if (retries < 5) {
+                    await new Promise(res => setTimeout(res, Math.pow(2, retries) * 1000));
+                    return fetchWithRetry(retries + 1);
+                }
+                throw err;
+            }
+        };
+        return fetchWithRetry();
     };
 
-    // 1. 初始化 Auth (遵循 Rule 3)
+    const getAiHint = async (word) => {
+        setAiLoading(true);
+        setAiHint("");
+        try {
+            const hint = await callGemini(`請解釋單字 "${word.word}" (${word.chinese}) 的仙界記憶法與用法。`);
+            setAiHint(hint);
+        } catch (e) {
+            notify("仙人閉關中，請稍後再試", "error");
+        }
+        setAiLoading(false);
+    };
+
+    // --- 核心邏輯 ---
     useEffect(() => {
         const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                console.error("Auth error", err);
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
             }
         };
         initAuth();
-        const unsubscribe = onAuthStateChanged(auth, (u) => {
+        return onAuthStateChanged(auth, (u) => {
             setUser(u);
             if (!u) setView('login');
         });
-        return () => unsubscribe();
     }, []);
 
-    // 2. 數據監聽
     useEffect(() => {
         if (!user) return;
+        const uRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
+        const wRef = collection(db, 'artifacts', appId, 'public', 'data', 'words');
         
-        const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-        const wordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'words');
-
-        const unsubUsers = onSnapshot(usersRef, (snap) => {
+        const unsubUsers = onSnapshot(uRef, (snap) => {
             const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             setAllUsers(list.sort((a, b) => (b.points || 0) - (a.points || 0)));
             const savedId = localStorage.getItem('active_hero_id');
@@ -103,16 +133,17 @@ export default function App() {
                 if (view === 'login') setView('dash');
             }
             setLoading(false);
-        }, (err) => console.error(err));
-
-        const unsubWords = onSnapshot(wordsRef, (snap) => {
-            setWords(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        }, (err) => console.error(err));
-
+        });
+        const unsubWords = onSnapshot(wRef, (snap) => setWords(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
         return () => { unsubUsers(); unsubWords(); };
     }, [user]);
 
-    // --- 裁切邏輯 ---
+    const notify = (text, type = "info") => {
+        setMessage({ text, type });
+        setTimeout(() => setMessage(null), 3000);
+    };
+
+    // 裁切完成
     const finalizeCrop = async () => {
         const canvas = document.createElement('canvas');
         canvas.width = 300; canvas.height = 300;
@@ -120,33 +151,29 @@ export default function App() {
         const img = new Image();
         img.onload = async () => {
             const size = 300 / cropPos.zoom;
-            ctx.fillStyle = "#0f172a"; ctx.fillRect(0,0,300,300);
+            ctx.fillStyle = "#020617"; ctx.fillRect(0,0,300,300);
             ctx.beginPath(); ctx.arc(150, 150, 150, 0, Math.PI * 2); ctx.clip();
             ctx.drawImage(img, img.width/2 - size/2 - cropPos.x/cropPos.zoom, img.height/2 - size/2 - cropPos.y/cropPos.zoom, size, size, 0, 0, 300, 300);
             const base64 = canvas.toDataURL('image/jpeg', 0.8);
             if (profile) {
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', profile.id), { avatar: base64 });
-                notify("靈像煉化成功！", "success");
             } else {
                 localStorage.setItem('temp_avatar', base64);
-                notify("元神影像已暫存", "success");
             }
             setView(profile ? 'dash' : 'login');
+            notify("靈像煉化完畢", "success");
         };
         img.src = cropSource;
     };
 
-    // --- 挑戰邏輯 ---
     const startChallenge = (isBonus = false) => {
         const today = new Date().toLocaleDateString();
         const attempts = profile.lastPlayed === today ? (profile.todayAttempts || 0) : 0;
         if (!isBonus && attempts >= 3) return notify("今日三輪修煉已畢，請進入練功房。");
-
-        const shuffled = [...words].sort(() => 0.5 - Math.random()).slice(0, 10);
-        if (shuffled.length < 5) return notify("字庫空虛，請掌門匯入單字。");
-        
-        setCurrentChallenge({ words: shuffled, currentIndex: 0, mistakes: [], isBonus });
-        setChallengeResult(null); setShowAnswer(false); setView('challenge');
+        const pool = [...words].sort(() => 0.5 - Math.random()).slice(0, 10);
+        if (pool.length < 5) return notify("字庫空虛，請掌門匯入法寶。");
+        setCurrentChallenge({ words: pool, currentIndex: 0, mistakes: [], isBonus });
+        setChallengeResult(null); setShowAnswer(false); setAiHint(""); setView('challenge');
     };
 
     const handleAnswer = (correct) => {
@@ -154,32 +181,24 @@ export default function App() {
         const mistakes = correct ? cur.mistakes : [...cur.mistakes, cur.words[cur.currentIndex]];
         if (cur.currentIndex < cur.words.length - 1) {
             setCurrentChallenge({ ...cur, currentIndex: cur.currentIndex + 1, mistakes });
-            setShowAnswer(false);
+            setShowAnswer(false); setAiHint("");
         } else {
             finishChallenge(mistakes);
         }
     };
 
     const finishChallenge = async (mistakes) => {
-        if (!user || !profile) return;
         const isPerfect = mistakes.length === 0;
         const today = new Date().toLocaleDateString();
-        const gain = isPerfect ? 500 : 100;
+        const multiplier = 1 + (profile.rebornCount || 0) * 0.5;
+        const gain = Math.floor((isPerfect ? 500 : 100) * multiplier);
         const newAttempts = currentChallenge.isBonus ? profile.todayAttempts : (profile.lastPlayed === today ? (profile.todayAttempts || 0) + 1 : 1);
-
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', profile.id), {
             points: (profile.points || 0) + gain,
             todayAttempts: newAttempts,
-            lastPlayed: today,
-            reviews: (profile.reviews || 0) + currentChallenge.words.length
+            lastPlayed: today
         });
-
-        setChallengeResult({ 
-            mistakes, 
-            isPerfect, 
-            canRevive: mistakes.length > 0 && mistakes.length <= 3, 
-            canContinue: isPerfect && newAttempts < 3 
-        });
+        setChallengeResult({ mistakes, isPerfect, canRevive: mistakes.length > 0 && mistakes.length <= 3, canContinue: isPerfect && newAttempts < 3 });
     };
 
     const currentRank = useMemo(() => {
@@ -187,21 +206,21 @@ export default function App() {
         return [...ALL_RANKS].reverse().find(r => (profile.points || 0) >= r.min) || ALL_RANKS[0];
     }, [profile]);
 
-    // --- UI 組件 ---
+    // --- UI 元件 ---
     const Glass = ({ children, className="" }) => (
-        <div className={`backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 shadow-2xl ${className}`}>{children}</div>
+        <div className={`backdrop-blur-2xl bg-white/10 border border-white/20 rounded-[2rem] p-6 shadow-2xl ${className}`}>{children}</div>
     );
 
-    const Btn = ({ children, onClick, color="purple", className="" }) => {
+    const Btn = ({ children, onClick, color="purple", className="", disabled=false }) => {
         const styles = {
             purple: "from-purple-600 to-indigo-700 shadow-purple-500/20",
             gold: "from-amber-400 to-orange-600 shadow-orange-500/20",
             red: "from-red-500 to-pink-700 shadow-red-500/20",
             green: "from-emerald-500 to-teal-700 shadow-teal-500/20",
-            gray: "from-gray-600 to-slate-800"
+            gray: "from-slate-700 to-slate-900"
         };
         return (
-            <button onClick={onClick} className={`bg-gradient-to-br ${styles[color]} px-6 py-3 rounded-2xl font-bold text-white transition-all active:scale-95 hover:brightness-110 shadow-lg ${className}`}>
+            <button disabled={disabled} onClick={onClick} className={`bg-gradient-to-br ${styles[color]} px-6 py-3 rounded-2xl font-bold text-white transition-all active:scale-95 hover:brightness-110 shadow-lg disabled:opacity-50 ${className}`}>
                 {children}
             </button>
         );
@@ -210,29 +229,29 @@ export default function App() {
     if (loading) return <div className="h-screen bg-[#020617] flex items-center justify-center text-purple-500 text-6xl animate-pulse">☯</div>;
 
     return (
-        <div className="min-h-screen bg-[#020617] text-slate-100 font-sans selection:bg-purple-500/30">
-            {/* 動態通知彈窗 */}
+        <div className="min-h-screen bg-[#020617] text-slate-100 font-sans selection:bg-purple-500/30 overflow-x-hidden">
+            {/* 通知彈窗 */}
             {message && (
-                <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-2xl font-bold animate-bounce ${message.type === 'success' ? 'bg-emerald-500' : 'bg-indigo-600'}`}>
+                <div className={`fixed top-12 left-1/2 -translate-x-1/2 z-[300] px-8 py-4 rounded-2xl shadow-2xl font-bold text-white transition-all animate-bounce ${message.type === 'success' ? 'bg-emerald-600' : 'bg-indigo-600'}`}>
                     {message.text}
                 </div>
             )}
 
-            {/* 動態背景 */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-purple-900/10 blur-[120px] rounded-full animate-pulse" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-900/10 blur-[120px] rounded-full" />
+            {/* 動態背景特效 */}
+            <div className="fixed inset-0 pointer-events-none opacity-40">
+                <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] bg-purple-900/30 blur-[100px] rounded-full animate-pulse" />
+                <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-900/30 blur-[100px] rounded-full" />
             </div>
 
             <main className="relative z-10 max-w-2xl mx-auto p-4 md:p-8 flex flex-col min-h-screen">
                 
                 {view === 'login' && (
-                    <div className="flex-1 flex flex-col items-center justify-center space-y-10 animate-in fade-in duration-1000">
-                        <div className="text-center">
-                            <h1 className="text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-amber-200 to-blue-400">仙逆單字傳</h1>
-                            <p className="mt-4 text-slate-500 tracking-[0.8em] text-xs">NIER PAN · CHONG SHENG</p>
+                    <div className="flex-1 flex flex-col items-center justify-center space-y-12 animate-in fade-in duration-1000">
+                        <div className="text-center space-y-4">
+                            <h1 className="text-7xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-amber-200 to-blue-400 drop-shadow-2xl">仙逆單字傳</h1>
+                            <p className="text-slate-500 tracking-[1em] text-xs font-light">NIER PAN · NIRVANA</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-6 w-full">
+                        <div className="grid grid-cols-2 gap-8 w-full px-4">
                             {allUsers.map(hero => (
                                 <button key={hero.id} onClick={() => {
                                     const p = prompt("請輸入修士密碼：");
@@ -240,16 +259,17 @@ export default function App() {
                                         localStorage.setItem('active_hero_id', hero.id);
                                         setProfile(hero);
                                         setView('dash');
-                                    } else notify("密碼錯誤，神魂不符！");
+                                    } else notify("神魂不符，密碼錯誤！", "error");
                                 }} className="group">
-                                    <div className="aspect-square rounded-3xl overflow-hidden border-2 border-white/5 group-hover:border-purple-500 transition-all shadow-2xl">
+                                    <div className="aspect-square rounded-[2.5rem] overflow-hidden border-2 border-white/5 group-hover:border-purple-500 transition-all shadow-2xl relative">
                                         {hero.avatar ? <img src={hero.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-800 flex items-center justify-center text-5xl">👤</div>}
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center font-bold">進入</div>
                                     </div>
-                                    <p className="mt-3 font-bold text-center">{hero.name}</p>
+                                    <p className="mt-4 font-bold text-center text-lg">{hero.name}</p>
                                 </button>
                             ))}
-                            <button onClick={() => setView('create')} className="aspect-square rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center hover:bg-white/5 transition-all gap-2">
-                                <span className="text-4xl text-slate-600">+</span>
+                            <button onClick={() => setView('create')} className="aspect-square rounded-[2.5rem] border-2 border-dashed border-white/10 flex flex-col items-center justify-center hover:bg-white/5 transition-all gap-3 group">
+                                <span className="text-5xl text-slate-700 group-hover:text-purple-400 transition-colors">+</span>
                                 <span className="text-xs text-slate-500">凝聚元神</span>
                             </button>
                         </div>
@@ -258,7 +278,7 @@ export default function App() {
 
                 {view === 'create' && (
                     <Glass className="max-w-md mx-auto w-full animate-in slide-in-from-bottom">
-                        <h2 className="text-2xl font-bold mb-8 text-center text-purple-300">修士登記</h2>
+                        <h2 className="text-3xl font-bold mb-10 text-center text-purple-300">修士登記</h2>
                         <form onSubmit={async (e) => {
                             e.preventDefault();
                             const id = crypto.randomUUID();
@@ -272,7 +292,6 @@ export default function App() {
                             localStorage.setItem('active_hero_id', id);
                             localStorage.removeItem('temp_avatar');
                             setView('dash');
-                            notify("初入仙堡，請努力修煉！", "success");
                         }} className="space-y-6">
                             <div className="flex flex-col items-center gap-4">
                                 <label className="relative cursor-pointer group">
@@ -288,10 +307,11 @@ export default function App() {
                                         }
                                     }} />
                                 </label>
+                                <p className="text-xs text-slate-500">點擊上傳靈像（可自由裁切）</p>
                             </div>
-                            <input name="heroName" required placeholder="修士名號" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-purple-500" />
-                            <input name="heroPwd" required type="password" placeholder="神魂密碼" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-purple-500" />
-                            <div className="flex gap-4">
+                            <input name="heroName" required placeholder="修士名號" className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-purple-500" />
+                            <input name="heroPwd" required type="password" placeholder="神魂密碼" className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-purple-500" />
+                            <div className="flex gap-4 pt-4">
                                 <Btn color="gray" className="flex-1" onClick={() => setView('login')}>返回</Btn>
                                 <Btn color="purple" className="flex-1" type="submit">開始修行</Btn>
                             </div>
@@ -300,10 +320,10 @@ export default function App() {
                 )}
 
                 {view === 'crop' && (
-                    <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center p-6">
-                        <h2 className="text-2xl font-bold mb-8 text-purple-400">煉化靈像</h2>
+                    <div className="fixed inset-0 z-[200] bg-[#020617] flex flex-col items-center justify-center p-6">
+                        <h2 className="text-3xl font-black mb-10 text-purple-400">煉化靈像</h2>
                         <div 
-                            className="relative w-80 h-80 rounded-full border-4 border-purple-500/50 overflow-hidden touch-none select-none bg-black shadow-[0_0_50px_rgba(168,85,247,0.2)]"
+                            className="relative w-80 h-80 rounded-full border-4 border-purple-500/50 overflow-hidden touch-none select-none bg-black shadow-[0_0_80px_rgba(168,85,247,0.15)]"
                             onMouseDown={() => setIsDragging(true)}
                             onMouseUp={() => setIsDragging(false)}
                             onMouseMove={(e) => isDragging && setCropPos(p => ({ ...p, x: p.x + e.movementX, y: p.y + e.movementY }))}
@@ -320,8 +340,8 @@ export default function App() {
                         >
                             <img src={cropSource} className="absolute pointer-events-none max-w-none origin-center" style={{ transform: `translate(${cropPos.x}px, ${cropPos.y}px) scale(${cropPos.zoom})`, top: '50%', left: '50%', marginLeft: '-50%', marginTop: '-50%', width: '100%' }} />
                         </div>
-                        <div className="w-full max-w-xs mt-10 space-y-6">
-                            <input type="range" min="0.5" max="3" step="0.01" value={cropPos.zoom} onChange={(e) => setCropPos(p => ({ ...p, zoom: parseFloat(e.target.value) }))} className="w-full accent-purple-500" />
+                        <div className="w-full max-w-sm mt-12 space-y-8">
+                            <input type="range" min="0.5" max="3" step="0.01" value={cropPos.zoom} onChange={(e) => setCropPos(p => ({ ...p, zoom: parseFloat(e.target.value) }))} className="w-full h-2 bg-slate-800 rounded-lg appearance-none accent-purple-500" />
                             <div className="flex gap-4">
                                 <Btn color="gray" className="flex-1" onClick={() => setView(profile ? 'dash' : 'login')}>取消</Btn>
                                 <Btn color="gold" className="flex-1" onClick={finalizeCrop}>確定煉化</Btn>
@@ -331,69 +351,77 @@ export default function App() {
                 )}
 
                 {profile && view === 'dash' && (
-                    <div className="space-y-6 animate-in fade-in">
-                        <Glass className="relative overflow-hidden group">
-                            <div className="flex items-center gap-6">
-                                <div className="relative cursor-pointer" onClick={() => {
-                                    if (profile.avatar) { setCropSource(profile.avatar); setCropPos({ x: 0, y: 0, zoom: 1 }); setView('crop'); }
-                                }}>
-                                    <div className="w-24 h-24 rounded-3xl border-2 border-purple-500/50 overflow-hidden">
+                    <div className="space-y-8 animate-in fade-in duration-700">
+                        <Glass className="relative overflow-hidden">
+                            <div className="flex items-center gap-8">
+                                <div className="relative cursor-pointer" onClick={() => { if(profile.avatar) { setCropSource(profile.avatar); setCropPos({x:0,y:0,zoom:1}); setView('crop'); } }}>
+                                    <div className="w-28 h-28 rounded-[2rem] border-2 border-purple-500/50 overflow-hidden shadow-2xl shadow-purple-500/20">
                                         {profile.avatar ? <img src={profile.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-800" />}
                                     </div>
-                                    <div className="absolute -bottom-2 -right-2 bg-purple-600 rounded-lg p-1 text-[10px]">裁切</div>
+                                    <div className="absolute -bottom-2 -right-2 bg-purple-600 rounded-xl px-2 py-1 text-[10px] text-white font-bold">裁切</div>
                                 </div>
-                                <div className="flex-1">
+                                <div className="flex-1 space-y-2">
                                     <div className="flex items-center gap-3">
-                                        <h3 className="text-2xl font-bold text-white">{profile.name}</h3>
-                                        <button onClick={() => setView('library')} className="p-1 hover:bg-white/10 rounded-full text-lg">⚙️</button>
+                                        <h3 className="text-3xl font-black text-white">{profile.name}</h3>
+                                        <button onClick={() => setView('library')} className="p-2 hover:bg-white/10 rounded-full text-xl transition-all">⚙️</button>
                                     </div>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className={`px-3 py-0.5 rounded-full text-[10px] font-bold border`} style={{ borderColor: currentRank.color, color: currentRank.color, backgroundColor: `${currentRank.color}20` }}>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <span className={`px-4 py-1 rounded-full text-xs font-black border transition-all ${currentRank.glow ? 'animate-pulse' : ''}`} style={{ borderColor: currentRank.color, color: currentRank.color, backgroundColor: `${currentRank.color}20` }}>
                                             {currentRank.title}
                                         </span>
-                                        <span className="text-xs text-slate-500">修為：{profile.points?.toLocaleString()}</span>
+                                        <span className="text-xs text-slate-400 font-mono">修為：{profile.points?.toLocaleString()}</span>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-4xl font-black text-amber-400">{profile.rebornCount || 0}</div>
-                                    <div className="text-[10px] text-slate-600">轉世</div>
+                                    <div className="text-5xl font-black text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.4)]">{profile.rebornCount || 0}</div>
+                                    <div className="text-[10px] text-slate-600 font-bold tracking-tighter">轉世印記</div>
                                 </div>
                             </div>
                         </Glass>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div onClick={() => startChallenge()} className="bg-gradient-to-br from-indigo-900/40 to-slate-900/60 p-6 rounded-3xl border border-indigo-500/20 cursor-pointer hover:border-indigo-500/50 transition-all">
-                                <div className="text-4xl mb-3">⚔️</div>
-                                <h4 className="font-bold text-lg text-indigo-300">每日修煉</h4>
-                                <p className="text-[10px] text-slate-500 mt-1">輪次: {profile.todayAttempts || 0}/3</p>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div onClick={() => startChallenge()} className="bg-gradient-to-br from-indigo-900/40 to-slate-900/60 p-8 rounded-[2.5rem] border border-indigo-500/20 cursor-pointer hover:border-indigo-500/50 transition-all hover:-translate-y-1">
+                                <div className="text-5xl mb-4">⚔️</div>
+                                <h4 className="font-bold text-xl text-indigo-300">每日修煉</h4>
+                                <p className="text-[10px] text-slate-500 mt-2 font-mono uppercase">Attempts: {profile.todayAttempts || 0}/3</p>
                             </div>
-                            <div onClick={() => setView('lobby')} className="bg-gradient-to-br from-emerald-900/40 to-slate-900/60 p-6 rounded-3xl border border-emerald-500/20 cursor-pointer hover:border-emerald-500/50 transition-all">
-                                <div className="text-4xl mb-3">🏆</div>
-                                <h4 className="font-bold text-lg text-emerald-300">仙界榜單</h4>
-                                <p className="text-[10px] text-slate-500 mt-1">英雄排名</p>
+                            <div onClick={() => setView('lobby')} className="bg-gradient-to-br from-emerald-900/40 to-slate-900/60 p-8 rounded-[2.5rem] border border-emerald-500/20 cursor-pointer hover:border-emerald-500/50 transition-all hover:-translate-y-1">
+                                <div className="text-5xl mb-4">🏆</div>
+                                <h4 className="font-bold text-xl text-emerald-300">仙界榜單</h4>
+                                <p className="text-[10px] text-slate-500 mt-2 font-mono uppercase">Leaderboard</p>
                             </div>
                         </div>
 
-                        <Btn color="gray" className="w-full" onClick={() => { localStorage.removeItem('active_hero_id'); setProfile(null); setView('login'); }}>🚪 退出仙堡</Btn>
+                        <div className="pt-4">
+                            <Btn color="gray" className="w-full text-lg py-5" onClick={() => { localStorage.removeItem('active_hero_id'); setProfile(null); setView('login'); }}>🚪 退出仙堡</Btn>
+                        </div>
                     </div>
                 )}
 
                 {view === 'challenge' && currentChallenge && (
-                    <div className="flex-1 flex flex-col space-y-8 animate-in slide-in-from-right">
-                        <div className="flex justify-between items-center px-2">
-                            <div className="h-1 flex-1 bg-slate-800 rounded-full overflow-hidden mr-6">
-                                <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all" style={{ width: `${((currentChallenge.currentIndex + 1) / currentChallenge.words.length) * 100}%` }} />
+                    <div className="flex-1 flex flex-col space-y-8 animate-in slide-in-from-right duration-500">
+                        <div className="flex justify-between items-center px-4">
+                            <div className="h-2 flex-1 bg-slate-900 rounded-full overflow-hidden mr-8">
+                                <div className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500 transition-all duration-500" style={{ width: `${((currentChallenge.currentIndex + 1) / currentChallenge.words.length) * 100}%` }} />
                             </div>
-                            <span className="text-[10px] font-mono text-slate-500">{currentChallenge.currentIndex + 1} / {currentChallenge.words.length}</span>
+                            <span className="text-xs font-mono text-slate-500">{currentChallenge.currentIndex + 1} / {currentChallenge.words.length}</span>
                         </div>
 
-                        <Glass className="flex-1 flex flex-col items-center justify-center text-center py-16">
-                            <p className="text-purple-400 text-[10px] font-bold tracking-[0.3em] mb-4 uppercase">{currentChallenge.isRevive ? "💀 敗部復活" : "修煉本質"}</p>
-                            <h2 className="text-7xl font-black text-white">{currentChallenge.words[currentChallenge.currentIndex].word}</h2>
+                        <Glass className="flex-1 flex flex-col items-center justify-center text-center py-20 relative overflow-hidden">
+                            <p className="text-purple-400 text-[10px] font-black tracking-[0.5em] mb-6 uppercase">{currentChallenge.isRevive ? "💀 敗部復活戰" : "修煉本源"}</p>
+                            <h2 className="text-8xl font-black text-white drop-shadow-2xl mb-8">{currentChallenge.words[currentChallenge.currentIndex].word}</h2>
+                            
                             {showAnswer && (
-                                <div className="pt-8 mt-8 border-t border-white/5 animate-in fade-in zoom-in w-full">
-                                    <p className="text-3xl text-amber-400 font-bold">{currentChallenge.words[currentChallenge.currentIndex].chinese}</p>
-                                    <p className="text-sm text-slate-500 mt-2 italic">{currentChallenge.words[currentChallenge.currentIndex].type}</p>
+                                <div className="pt-10 mt-10 border-t border-white/5 animate-in fade-in zoom-in w-full">
+                                    <p className="text-4xl text-amber-400 font-black mb-2">{currentChallenge.words[currentChallenge.currentIndex].chinese}</p>
+                                    <p className="text-lg text-slate-500 italic">{currentChallenge.words[currentChallenge.currentIndex].type}</p>
+                                    
+                                    {aiHint && (
+                                        <div className="mt-8 p-6 bg-purple-500/10 border border-purple-500/20 rounded-2xl text-left text-sm text-purple-200 leading-relaxed italic animate-in slide-in-from-bottom">
+                                            <span className="text-amber-400 font-bold block mb-1">✨ 仙人指路：</span>
+                                            {aiHint}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </Glass>
@@ -401,23 +429,28 @@ export default function App() {
                         {!challengeResult ? (
                             <div className="space-y-4">
                                 {!showAnswer ? (
-                                    <Btn color="purple" className="w-full h-20 text-xl" onClick={() => setShowAnswer(true)}>翻開玉簡 (看答案)</Btn>
+                                    <div className="flex gap-4">
+                                        <Btn color="purple" className="flex-1 h-24 text-2xl" onClick={() => setShowAnswer(true)}>翻開玉簡 (看答案)</Btn>
+                                        <Btn color="gold" className="px-6" onClick={() => getAiHint(currentChallenge.words[currentChallenge.currentIndex])} disabled={aiLoading}>
+                                            {aiLoading ? "感應中..." : "✨ 指路"}
+                                        </Btn>
+                                    </div>
                                 ) : (
-                                    <div className="grid grid-cols-2 gap-4 h-24">
-                                        <button onClick={() => handleAnswer(false)} className="bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 font-bold">遺忘</button>
-                                        <button onClick={() => handleAnswer(true)} className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 font-bold">精熟</button>
+                                    <div className="grid grid-cols-2 gap-6 h-28">
+                                        <button onClick={() => handleAnswer(false)} className="bg-red-500/10 border border-red-500/30 rounded-[2rem] text-red-400 font-black text-xl hover:bg-red-500/20 transition-all">遺忘 (Forget)</button>
+                                        <button onClick={() => handleAnswer(true)} className="bg-emerald-500/10 border border-emerald-500/30 rounded-[2rem] text-emerald-400 font-black text-xl hover:bg-emerald-500/20 transition-all">精熟 (Know)</button>
                                     </div>
                                 )}
                             </div>
                         ) : (
-                            <Glass className="animate-in zoom-in">
-                                <div className="text-center space-y-8">
-                                    <h3 className="text-4xl font-black text-amber-400">{challengeResult.isPerfect ? "✨ 圓滿通關 ✨" : "修煉結束"}</h3>
-                                    <div className="flex flex-col gap-3">
-                                        {challengeResult.canRevive && <Btn color="red" onClick={() => { setCurrentChallenge({...currentChallenge, words: challengeResult.mistakes, currentIndex: 0, mistakes: [], isRevive: true}); setChallengeResult(null); setShowAnswer(false); }}>敗部復活</Btn>}
-                                        {challengeResult.canContinue && <Btn color="green" onClick={() => startChallenge(true)}>下一組 (Bonus)</Btn>}
-                                        <Btn color="purple" onClick={() => setView('dash')}>回到主堡</Btn>
-                                    </div>
+                            <Glass className="animate-in zoom-in text-center space-y-10 py-12">
+                                <h3 className="text-5xl font-black text-amber-400 drop-shadow-2xl">
+                                    {challengeResult.isPerfect ? "✨ 圓滿通關 ✨" : "修行結束"}
+                                </h3>
+                                <div className="flex flex-col gap-4 max-w-sm mx-auto">
+                                    {challengeResult.canRevive && <Btn color="red" className="py-5 text-xl" onClick={() => { setCurrentChallenge({...currentChallenge, words: challengeResult.mistakes, currentIndex:0, mistakes:[], isRevive: true}); setChallengeResult(null); setShowAnswer(false); setAiHint(""); }}>進入敗部復活戰</Btn>}
+                                    {challengeResult.canContinue && <Btn color="green" className="py-5 text-xl" onClick={() => startChallenge(true)}>挑戰下一組 (Bonus)</Btn>}
+                                    <Btn color="purple" className="py-5 text-xl" onClick={() => setView('dash')}>回到主堡</Btn>
                                 </div>
                             </Glass>
                         )}
@@ -425,44 +458,46 @@ export default function App() {
                 )}
 
                 {view === 'library' && (
-                    <div className="space-y-6">
+                    <div className="space-y-8 animate-in fade-in">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-3xl font-bold text-white">仙堡藏經閣</h2>
+                            <h2 className="text-4xl font-black text-white">仙堡藏經閣</h2>
                             <Btn color="gray" onClick={() => setView('dash')}>返回</Btn>
                         </div>
                         {!adminMode ? (
-                            <div className="text-center py-20">
-                                <Btn color="purple" onClick={() => { if (prompt("輸入掌門密碼：") === '123456') setAdminMode(true); }}>掌門解鎖</Btn>
+                            <div className="text-center py-24">
+                                <Btn color="purple" className="text-xl px-12" onClick={() => { if(prompt("掌門密碼：")==='123456') setAdminMode(true); else notify("修為不足！", "error"); }}>掌門解鎖</Btn>
                             </div>
                         ) : (
-                            <div className="space-y-6">
-                                <Glass className="space-y-4">
-                                    <h4 className="font-bold border-b border-white/5 pb-2 text-amber-400 text-sm">單字批次匯入</h4>
-                                    <textarea id="csvInput" placeholder="word chinese type (一行一個)" className="w-full h-32 bg-black/40 border border-white/10 rounded-xl p-3 text-xs" />
-                                    <div className="flex gap-2">
-                                        <Btn color="gold" className="flex-1 text-xs" onClick={async () => {
+                            <div className="space-y-8 pb-10">
+                                <Glass className="space-y-6">
+                                    <h4 className="font-bold border-b border-white/10 pb-3 text-amber-400 uppercase tracking-widest">批次煉化法寶</h4>
+                                    <textarea id="csvInput" placeholder="格式: word chinese type (一行一個)" className="w-full h-48 bg-black/40 border border-white/10 rounded-[2rem] p-5 text-sm focus:border-amber-500 outline-none transition-all font-mono" />
+                                    <div className="flex gap-4">
+                                        <Btn color="gold" className="flex-1" onClick={async () => {
                                             const lines = document.getElementById('csvInput').value.split('\n');
-                                            for (let line of lines) {
-                                                const parts = line.split(/[,\s\t]+/);
-                                                if (parts.length >= 2) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'words'), { word: parts[0], chinese: parts[1], type: parts[2] || "n." });
+                                            let count = 0;
+                                            for(let l of lines){
+                                                const p = l.split(/[,\s\t]+/);
+                                                if(p.length >= 2) { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'words'), {word:p[0], chinese:p[1], type:p[2]||"n."}); count++; }
                                             }
-                                            notify("匯入完畢！", "success");
-                                        }}>智慧匯入</Btn>
-                                        <Btn color="red" className="flex-1 text-xs" onClick={async () => {
-                                            if (confirm("確定毀天滅地清空字庫？")) {
-                                                for (const w of words) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'words', w.id));
-                                                notify("字庫已重歸虛無");
+                                            notify(`成功煉化 ${count} 件法寶！`, "success");
+                                        }}>智能匯入</Btn>
+                                        <Btn color="red" className="flex-1" onClick={async () => {
+                                            if(confirm("確定執行『毀天滅地』清空字庫？")){
+                                                for(const w of words) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'words', w.id));
+                                                notify("萬物回歸虛無", "success");
                                             }
                                         }}>核彈清空</Btn>
                                     </div>
                                 </Glass>
-                                <Glass className="space-y-4">
-                                    <h4 className="font-bold border-b border-white/5 pb-2 text-purple-400 text-sm">修士名錄</h4>
-                                    <div className="space-y-2">
+                                
+                                <Glass className="space-y-6">
+                                    <h4 className="font-bold border-b border-white/10 pb-3 text-purple-400 uppercase tracking-widest">修士名錄</h4>
+                                    <div className="space-y-3">
                                         {allUsers.map(u => (
-                                            <div key={u.id} className="flex items-center justify-between bg-white/5 p-3 rounded-xl text-xs">
-                                                <span>{u.name} (修為: {u.points})</span>
-                                                <button onClick={() => { if (confirm(`廢除 ${u.name} 修為？`)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id)); }} className="text-red-400">刪除</button>
+                                            <div key={u.id} className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5">
+                                                <span className="font-bold">{u.name} (修為: {u.points})</span>
+                                                <button onClick={() => { if(confirm(`廢除 ${u.name} 的修為？`)) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id)); }} className="text-red-400 font-bold hover:underline">逐出師門</button>
                                             </div>
                                         ))}
                                     </div>
@@ -473,27 +508,27 @@ export default function App() {
                 )}
 
                 {view === 'lobby' && (
-                    <div className="space-y-6">
+                    <div className="space-y-8 animate-in fade-in">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-3xl font-bold text-white">仙界榜單</h2>
+                            <h2 className="text-4xl font-black text-white">仙界榜單</h2>
                             <Btn color="gray" onClick={() => setView('dash')}>返回</Btn>
                         </div>
                         <div className="space-y-4">
                             {allUsers.map((hero, idx) => {
                                 const rank = [...ALL_RANKS].reverse().find(r => (hero.points || 0) >= r.min) || ALL_RANKS[0];
                                 return (
-                                    <div key={hero.id} className={`flex items-center gap-4 p-4 rounded-3xl border transition-all ${hero.id === profile?.id ? 'bg-purple-500/10 border-purple-500' : 'bg-white/5 border-white/10'}`}>
-                                        <div className="w-8 text-center font-black text-slate-600">#{idx + 1}</div>
-                                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-800">
+                                    <div key={hero.id} className={`flex items-center gap-6 p-6 rounded-[2rem] border transition-all ${hero.id === profile?.id ? 'bg-purple-500/20 border-purple-500 shadow-lg shadow-purple-500/20' : 'bg-white/5 border-white/5'}`}>
+                                        <div className="w-10 text-center font-black text-slate-500 text-2xl italic">#{idx + 1}</div>
+                                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-800 shadow-xl">
                                             {hero.avatar && <img src={hero.avatar} className="w-full h-full object-cover" />}
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="font-bold">{hero.name}</p>
-                                            <p className="text-[10px]" style={{ color: rank.color }}>{rank.title}</p>
+                                        <div className="flex-1 space-y-1">
+                                            <p className="font-black text-xl">{hero.name}</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: rank.color }}>{rank.title}</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-amber-400 font-mono font-bold">{hero.points?.toLocaleString()}</p>
-                                            <p className="text-[8px] text-slate-600 uppercase tracking-tighter">Points</p>
+                                            <p className="text-amber-400 font-mono font-black text-2xl">{hero.points?.toLocaleString()}</p>
+                                            <p className="text-[8px] text-slate-600 font-bold">Qi Points</p>
                                         </div>
                                     </div>
                                 );
@@ -501,6 +536,7 @@ export default function App() {
                         </div>
                     </div>
                 )}
+
             </main>
         </div>
     );
