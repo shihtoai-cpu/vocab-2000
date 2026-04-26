@@ -22,7 +22,16 @@
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center;">
+            <h1 style="color: #f59e0b; font-size: 2rem; margin-bottom: 1rem;">⚙️ 仙界陣法凝聚中...</h1>
+            <p style="color: #94a3b8; line-height: 1.8; font-size: 1rem;">
+                如果畫面一直卡在這裡，代表發生了嚴重錯誤：<br><br>
+                <b style="color: #ef4444;">1. 金鑰語法錯誤：</b> 貼上 Firebase 金鑰時，可能不小心刪掉了引號 <code>" "</code> 或逗號 <code>,</code>。<br>
+                <b style="color: #3b82f6;">2. 瀏覽器快取：</b> 請使用 <b>「無痕模式 (Incognito)」</b> 重新打開網頁測試！
+            </p>
+        </div>
+    </div>
 
     <script type="text/babel" data-type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -35,7 +44,7 @@
         // ⚠️ 掌門請注意：在這裡填入你的 Firebase 金鑰
         // ==========================================
         const firebaseConfig = {
-            apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
+  apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
   authDomain: "vocab-2000.firebaseapp.com",
   projectId: "vocab-2000",
   storageBucket: "vocab-2000.firebasestorage.app",
@@ -471,22 +480,25 @@
                 );
             };
 
-            if (loading) return <div className="h-screen bg-[#020617] flex flex-col items-center justify-center text-amber-500 font-serif"><div className="text-6xl animate-spin mb-4">☯</div><p className="text-xl tracking-[0.5em] font-bold">仙界連結中...</p></div>;
+            if (loading) return null; // 改由 HTML 外層處理載入畫面，避免閃爍
 
             return (
                 <div className="relative min-h-screen text-slate-100 font-serif selection:bg-amber-500/30 overflow-hidden pb-10">
+                    {/* 仙界動態光暈背景 */}
                     <div className="fixed inset-0 pointer-events-none z-0">
                         <div className="absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-purple-900/20 blur-[120px] rounded-full animate-pulse opacity-80" />
                         <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-amber-900/10 blur-[120px] rounded-full opacity-80" />
                         <div className="absolute top-[40%] left-[20%] w-[40vw] h-[40vw] bg-indigo-900/10 blur-[100px] rounded-full opacity-50 mix-blend-screen" />
                     </div>
 
+                    {/* 浮動通知 */}
                     {message && (
                         <div className={`fixed top-10 left-1/2 -translate-x-1/2 z-[600] px-8 py-4 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.8)] font-bold text-white transition-all animate-bounce border border-white/20 tracking-widest whitespace-nowrap ${message.type === 'success' ? 'bg-gradient-to-r from-emerald-600 to-teal-800' : message.type === 'error' ? 'bg-gradient-to-r from-rose-600 to-red-800' : 'bg-gradient-to-r from-indigo-600 to-purple-800'}`}>
                             {message.text}
                         </div>
                     )}
 
+                    {/* 自訂彈跳視窗 Modal */}
                     {modal && (
                         <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
                             <div className="bg-gradient-to-b from-slate-900 to-[#020617] border-2 border-amber-500/40 shadow-[0_0_50px_rgba(245,158,11,0.2)] rounded-[2rem] p-8 max-w-sm w-full space-y-6 animate-in zoom-in-95 relative overflow-hidden">
@@ -517,6 +529,7 @@
 
                     <main className="relative z-10 max-w-2xl mx-auto p-4 md:p-6 space-y-6">
 
+                        {/* ================= 登入 / 註冊 ================= */}
                         {view === 'login' && (
                             <div className="flex flex-col items-center justify-center py-12 space-y-16 animate-in fade-in">
                                 <div className="text-center space-y-4 relative">
@@ -591,6 +604,7 @@
                             </div>
                         )}
 
+                        {/* ================= 頭貼裁切 ================= */}
                         {view === 'crop' && (
                             <div className="fixed inset-0 z-[700] bg-[#020617]/95 backdrop-blur-md flex flex-col items-center justify-center p-6">
                                 <h2 className="text-4xl font-black mb-12 text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500 tracking-widest drop-shadow-lg">煉化靈像</h2>
@@ -627,6 +641,7 @@
                             </div>
                         )}
 
+                        {/* ================= 主堡大廳 ================= */}
                         {profile && view === 'dash' && (
                             <div className="space-y-6 animate-in fade-in duration-700">
                                 
@@ -723,6 +738,7 @@
                             </div>
                         )}
 
+                        {/* ================= 戰鬥挑戰 ================= */}
                         {view === 'challenge' && currentChallenge && (
                             <div className="space-y-6 animate-in slide-in-from-right relative">
                                 {!challengeResult && (
@@ -804,6 +820,7 @@
                             </div>
                         )}
 
+                        {/* ================= 拼寫特訓 ================= */}
                         {view === 'spell' && spellWord && (
                             <div className="space-y-6 animate-in slide-in-from-bottom">
                                 <div className="bg-gradient-to-b from-slate-800/80 to-[#020617] rounded-[3rem] p-12 text-center space-y-10 shadow-[0_15px_40px_rgba(0,0,0,0.8)] border border-amber-500/20 relative overflow-hidden">
@@ -840,6 +857,7 @@
                             </div>
                         )}
 
+                        {/* ================= 仙界榜單 (石碑設計) ================= */}
                         {view === 'lobby' && (
                             <div className="space-y-6 animate-in fade-in relative">
                                 <div className="flex justify-between items-center px-4 relative z-20">
@@ -887,6 +905,7 @@
                             </div>
                         )}
 
+                        {/* ================= 藏經閣 (管理員) ================= */}
                         {view === 'library' && (
                             <div className="space-y-8 pb-10">
                                 <div className="flex justify-between items-center px-4">
@@ -907,6 +926,7 @@
                                 ) : (
                                     <div className="space-y-8 animate-in fade-in">
                                         
+                                        {/* 系統法則設定 */}
                                         <div className="bg-gradient-to-b from-slate-900 to-[#020617] p-8 rounded-[2.5rem] space-y-6 shadow-xl border border-slate-700/50">
                                             <div className="flex justify-between items-center border-b border-slate-700/50 pb-4">
                                                 <h4 className="font-black text-xl text-emerald-400 tracking-[0.2em]">掌門法則 (系統參數)</h4>
@@ -933,6 +953,7 @@
                                             </div>
                                         </div>
 
+                                        {/* 檔案匯入與歷史 */}
                                         <div className="bg-gradient-to-b from-slate-900 to-[#020617] p-8 rounded-[2.5rem] space-y-6 shadow-xl border border-slate-700/50">
                                             <h4 className="font-black text-xl text-amber-400 border-b border-slate-700/50 pb-4 tracking-[0.2em]">法寶名冊 (CSV匯入)</h4>
                                             
@@ -952,56 +973,55 @@
                                             }}>💣 毀天滅地 (清空所有字庫)</Btn>
 
                                             <div className="pt-8 border-t border-slate-700/50 mt-8">
-                                                <h5 className="font-black text-sm text-slate-400 mb-5 tracking-[0.2em] uppercase">匯入歷史紀錄</h5>
-                                                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 hide-scrollbar">
-                                                    {importHistory.length === 0 && <p className="text-center text-sm text-slate-600 font-bold py-6">尚無匯入紀錄</p>}
-                                                    {importHistory.map(imp => (
-                                                        <div key={imp.id} className="flex justify-between items-center bg-[#020617] p-5 rounded-2xl border border-slate-700 shadow-inner">
-                                                            <div>
-                                                                <p className="text-amber-400 font-black text-lg mb-1">{imp.filename || '未命名檔案'}</p>
-                                                                <p className="text-[11px] text-slate-500 font-mono font-bold tracking-widest">{imp.date} · 共 <span className="text-white text-sm">{imp.count}</span> 筆</p>
-                                                            </div>
-                                                            <button className="text-sm font-black text-red-500 hover:text-white hover:bg-red-600 px-5 py-3 border border-red-500/50 rounded-xl transition-all shadow-md" onClick={() => deleteBatch(imp.id)}>銷毀此批</button>
-                                                        </div>
-                                                    ))}
+                                        <h5 className="font-black text-sm text-slate-400 mb-5 tracking-[0.2em] uppercase">匯入歷史紀錄</h5>
+                                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 hide-scrollbar">
+                                            {importHistory.length === 0 && <p className="text-center text-sm text-slate-600 font-bold py-6">尚無匯入紀錄</p>}
+                                            {importHistory.map(imp => (
+                                                <div key={imp.id} className="flex justify-between items-center bg-[#020617] p-5 rounded-2xl border border-slate-700 shadow-inner">
+                                                    <div>
+                                                        <p className="text-amber-400 font-black text-lg mb-1">{imp.filename || '未命名檔案'}</p>
+                                                        <p className="text-[11px] text-slate-500 font-mono font-bold tracking-widest">{imp.date} · 共 <span className="text-white text-sm">{imp.count}</span> 筆</p>
+                                                    </div>
+                                                    <button className="text-sm font-black text-red-500 hover:text-white hover:bg-red-600 px-5 py-3 border border-red-500/50 rounded-xl transition-all shadow-md" onClick={() => deleteBatch(imp.id)}>銷毀此批</button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 修士管理 */}
+                                <div className="bg-gradient-to-b from-slate-900 to-[#020617] p-8 rounded-[2.5rem] space-y-6 shadow-xl border border-slate-700/50">
+                                    <h4 className="font-black text-xl text-purple-400 border-b border-slate-700/50 pb-4 tracking-[0.2em]">修士名錄</h4>
+                                    <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 hide-scrollbar">
+                                        {allUsers.map(u => (
+                                            <div key={u.id} className="flex flex-col md:flex-row md:justify-between md:items-center bg-[#020617] p-5 rounded-2xl border border-slate-700 shadow-inner gap-4">
+                                                <div>
+                                                    <span className="font-black text-white text-xl block mb-1">{u.name}</span>
+                                                    <span className="text-xs text-slate-500 font-mono font-bold tracking-widest">修為: <span className="text-amber-400">{u.points}</span></span>
+                                                </div>
+                                                <div className="flex gap-3">
+                                                    <button className="flex-1 md:flex-none text-xs font-black text-blue-400 hover:text-white hover:bg-blue-600 px-4 py-2 border border-blue-500/50 rounded-xl transition-all" onClick={() => {
+                                                        promptAction("更改修士尊號", "輸入新名字...", (n) => {
+                                                            if(n) { updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', u.id), { name: n }); notify("名號已更改","success"); }
+                                                        });
+                                                    }}>改名</button>
+                                                    <button className="flex-1 md:flex-none text-xs font-black text-blue-400 hover:text-white hover:bg-blue-600 px-4 py-2 border border-blue-500/50 rounded-xl transition-all" onClick={() => {
+                                                        promptAction("修改密碼", "輸入新密碼...", (p) => {
+                                                            if(p) { updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', u.id), { password: p }); notify("密碼已修改","success"); }
+                                                        });
+                                                    }}>改密碼</button>
+                                                    <button className="flex-1 md:flex-none text-xs font-black text-red-500 hover:text-white hover:bg-red-600 px-4 py-2 border border-red-500/50 rounded-xl transition-all" onClick={() => {
+                                                        confirmAction("逐出師門", `將徹底刪除 ${u.name} 的所有修為，確定逐出師門？`, () => {
+                                                            deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', u.id));
+                                                            notify("已逐出師門", "success");
+                                                        });
+                                                    }}>逐出</button>
                                                 </div>
                                             </div>
-                                        </div>
-
-                                        <div className="bg-gradient-to-b from-slate-900 to-[#020617] p-8 rounded-[2.5rem] space-y-6 shadow-xl border border-slate-700/50">
-                                            <h4 className="font-black text-xl text-purple-400 border-b border-slate-700/50 pb-4 tracking-[0.2em]">修士名錄</h4>
-                                            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 hide-scrollbar">
-                                                {allUsers.map(u => (
-                                                    <div key={u.id} className="flex flex-col md:flex-row md:justify-between md:items-center bg-[#020617] p-5 rounded-2xl border border-slate-700 shadow-inner gap-4">
-                                                        <div>
-                                                            <span className="font-black text-white text-xl block mb-1">{u.name}</span>
-                                                            <span className="text-xs text-slate-500 font-mono font-bold tracking-widest">修為: <span className="text-amber-400">{u.points}</span></span>
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <button className="flex-1 md:flex-none text-xs font-black text-blue-400 hover:text-white hover:bg-blue-600 px-4 py-2 border border-blue-500/50 rounded-xl transition-all" onClick={() => {
-                                                                promptAction("更改修士尊號", "輸入新名字...", (n) => {
-                                                                    if(n) { updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', u.id), { name: n }); notify("名號已更改","success"); }
-                                                                });
-                                                            }}>改名</button>
-                                                            <button className="flex-1 md:flex-none text-xs font-black text-blue-400 hover:text-white hover:bg-blue-600 px-4 py-2 border border-blue-500/50 rounded-xl transition-all" onClick={() => {
-                                                                promptAction("修改密碼", "輸入新密碼...", (p) => {
-                                                                    if(p) { updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', u.id), { password: p }); notify("密碼已修改","success"); }
-                                                                });
-                                                            }}>改密碼</button>
-                                                            <button className="flex-1 md:flex-none text-xs font-black text-red-500 hover:text-white hover:bg-red-600 px-4 py-2 border border-red-500/50 rounded-xl transition-all" onClick={() => {
-                                                                confirmAction("逐出師門", `將徹底刪除 ${u.name} 的所有修為，確定逐出師門？`, () => {
-                                                                    deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', u.id));
-                                                                    notify("已逐出師門", "success");
-                                                                });
-                                                            }}>逐出</button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
+                                        ))}
                                     </div>
-                                )}
+                                </div>
+
                             </div>
                         )}
                     </div>
