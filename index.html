@@ -2,11 +2,11 @@
 <html lang="zh-TW">
 <head>
     <!-- PWA 核心命格設定 -->
-<link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIsS76YGT6YmYwrfku5npgIbllr7lrZfkv28iLAogICJzaG9ydF9uYW1lIjogIsS76YGT6YmYIiwKICAic3RhcnRfdXJsIjogIi4iLAogICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMDIwNjE3IiwKICAidGhlbWVfY29sb3ciOiAiIzAyMDYxNyIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vYXBpLmRpY2ViZWFyLmNvbS83LngvYXZhdGFhcnMvc3ZnP3NlZWQ9WGlhbiIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0KICBdCn0=">
-<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<!-- iOS 專用優化 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="天道碑">
+<link rel="apple-touch-icon" href="https://api.dicebear.com/7.x/avataaars/svg?seed=Xian">
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -814,35 +814,24 @@ const Trial = ({ user, settings, words, setView, onUpdate }) => {
     </script>
 
 <script>
-    // 註冊 PWA 護法神識 (Service Worker)
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            const swCode = `
-                const CACHE_NAME = 'xianni-v1';
-                self.addEventListener('install', (e) => {
-                    self.skipWaiting();
-                });
-                self.addEventListener('fetch', (e) => {
-                    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-                });
-            `;
-            const blob = new Blob([swCode], { type: 'text/javascript' });
-            const swUrl = URL.createObjectURL(blob);
-            navigator.serviceWorker.register(swUrl).then(reg => {
-                console.log('護法神識已就位 (PWA Registered)');
-            }).catch(err => {
-                console.log('護法神識覺醒失敗', err);
-            });
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('護法神識已於實體檔案覺醒'))
+                .catch(err => console.log('覺醒失敗', err));
         });
     }
 
-    // 攔截並自定義安裝提示 (Android)
-    let deferredPrompt;
+    // 捕捉安裝提示 (當瀏覽器準備好彈出「安裝APP」時)
     window.addEventListener('beforeinstallprompt', (e) => {
+        // 阻止自動彈出，讓你在合適的時機觸發（例如進入洞府後）
         e.preventDefault();
-        deferredPrompt = e;
-        // 可以在這裡做一個華麗的按鈕提示用戶「領取天逆珠 (安裝App)」
+        const deferredPrompt = e;
+        
+        // 這裡可以做一個按鈕，點擊後觸發安裝：
+        // deferredPrompt.prompt(); 
+        console.log('天道認可：此應用程式符合安裝資格');
     });
-</script>    
+</script> 
 </body>
 </html>
