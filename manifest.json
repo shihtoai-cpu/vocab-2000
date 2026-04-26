@@ -1,28 +1,23 @@
 {
-  "name": "單字記憶傳說",
-  "short_name": "單字傳說",
-  "start_url": "./index.html",
+  "name": "天逆珠・仙逆單字傳",
+  "short_name": "仙逆單字",
+  "description": "踏天之路上，每一單字皆為神通。",
+  "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#4c1d95",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "./icon.svg",
+      "src": "https://api.dicebear.com/7.x/avataaars/svg?seed=Xian",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "./icon.svg",
+      "src": "https://api.dicebear.com/7.x/avataaars/svg?seed=Xian",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/svg+xml"
     }
   ]
 }
