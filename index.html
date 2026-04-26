@@ -144,19 +144,32 @@ const autoCategorize = (zh) => {
             const [settings, setSettings] = useState({ rounds: 3, questions: 10, errors: 3, adminPw: "123456" });
 
             // 初始同步
+          // 初始同步：修正後的「滅鬼」邏輯
             useEffect(() => {
-                const lUsers = JSON.parse(localStorage.getItem('sn_u') || '[]');
-                const lWords = JSON.parse(localStorage.getItem('sn_w') || '[]');
-                const lBatches = JSON.parse(localStorage.getItem('sn_b') || '[]');
-                const lSets = JSON.parse(localStorage.getItem('sn_s') || 'null');
-                setUsers(lUsers); setWords(lWords); setBatches(lBatches);
-                if (lSets) setSettings(lSets);
-                
+                const load = (k, d) => JSON.parse(localStorage.getItem(k) || d);
+                // 先讀取本地作為備緩
+                setWords(load('sn_w', '[]'));
+                setBatches(load('sn_b', '[]'));
+                const s = load('sn_s', 'null');
+                if (s) setSettings(s);
+
+                // 核心：雲端修士偵聽 (這是唯一真相)
                 if (db) {
-                    db.collection("users").onSnapshot(s => {
-                        const list = s.docs.map(d => d.data());
-                        if(list.length) { setUsers(list); localStorage.setItem('sn_u', JSON.stringify(list)); }
+                    const unsubscribe = db.collection("users").onSnapshot(snapshot => {
+                        const cloudUsers = snapshot.docs.map(doc => doc.data());
+                        if (cloudUsers.length > 0) {
+                            setUsers(cloudUsers);
+                            localStorage.setItem('sn_u', JSON.stringify(cloudUsers));
+                        } else if (snapshot.metadata.fromCache === false) {
+                            // 如果雲端空了，本地也得清空
+                            setUsers([]);
+                            localStorage.setItem('sn_u', JSON.stringify([]));
+                        }
                     });
+                    return () => unsubscribe();
+                } else {
+                    // 無雲端時才使用本地名單
+                    setUsers(load('sn_u', '[]'));
                 }
             }, []);
 
