@@ -371,37 +371,30 @@ const autoCategorize = (zh) => {
         // ==========================================
         // 子組件: 拼寫核心引擎 (SpellingEngine)
         // ==========================================
-        const FlipEngine = ({ word, zh, pos, onResult, onBack }) => {
+ const FlipEngine = ({ word, zh, pos, onResult, onBack }) => {
             const [isFlipped, setIsFlipped] = useState(false);
-            const [startTime] = useState(Date.now());
+            const [startTime, setStartTime] = useState(Date.now());
             const [flipTime, setFlipTime] = useState(0);
-            const [grade, setGrade] = useState(null); // { label: 'A', color: 'text-green-400', pts: 20 }
-// 當題目變換時，洗滌神識狀態 (解決卡死問題)
+            const [grade, setGrade] = useState(null);
+
+            // 1. 洗滌狀態邏輯：當題目變換時，重置所有感悟狀態
             useEffect(() => {
                 setIsFlipped(false);
                 setGrade(null);
                 setFlipTime(0);
+                setStartTime(Date.now()); // 重新計時
             }, [word]);
 
-            // 定義進入下一題的法門
-            const handleNext = () => {
-                if (!grade) return;
-                onResult(grade.pts > 0, grade.pts, flipTime);
-            };
-            // 當單字變更時，強制洗滌狀態，防止卡在評分畫面
-            useEffect(() => {
-                setIsFlipped(false);
-                setGrade(null);
-                setFlipTime(0);
-            }, [word]);
+            // 2. 翻牌法門
             const handleFlip = () => {
-                if (isFlipped) return;
+                if (isFlipped || grade) return;
                 setFlipTime((Date.now() - startTime) / 1000);
                 setIsFlipped(true);
             };
 
+            // 3. 判定等級邏輯
             const evaluate = (isCorrect) => {
-                if (grade) return; // 防止重複點擊
+                if (grade) return; 
                 let res = { label: 'C', color: 'text-red-500', pts: -5 };
                 if (isCorrect) {
                     if (flipTime < 1.5) res = { label: 'SSS', color: 'text-red-600 font-black animate-pulse', pts: 50 };
@@ -412,12 +405,11 @@ const autoCategorize = (zh) => {
                 setGrade(res);
             };
 
-            // 點擊評分畫面後，才真正回傳結果並進入下一題
+            // 4. 下一題轉場法門
             const handleNext = () => {
                 if (!grade) return;
                 onResult(grade.pts > 0, grade.pts, flipTime);
             };
-            return (
                 <div className="flex-1 flex flex-col items-center justify-center space-y-10 w-full p-4">
                     <button onClick={onBack} className="btn-exit fixed top-8 left-8">儲存進度並遁走</button>
                     
