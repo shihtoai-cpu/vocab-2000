@@ -382,28 +382,25 @@ const autoCategorize = (zh) => {
         // ==========================================
         // 子組件: 拼寫核心引擎 (SpellingEngine)
         // ==========================================
- const FlipEngine = ({ word, zh, pos, onResult, onBack }) => {
+const FlipEngine = ({ word, zh, pos, onResult, onBack }) => {
             const [isFlipped, setIsFlipped] = useState(false);
             const [startTime, setStartTime] = useState(Date.now());
             const [flipTime, setFlipTime] = useState(0);
             const [grade, setGrade] = useState(null);
 
-            // 1. 洗滌狀態邏輯：當題目變換時，重置所有感悟狀態
             useEffect(() => {
                 setIsFlipped(false);
                 setGrade(null);
                 setFlipTime(0);
-                setStartTime(Date.now()); // 重新計時
+                setStartTime(Date.now());
             }, [word]);
 
-            // 2. 翻牌法門
             const handleFlip = () => {
                 if (isFlipped || grade) return;
                 setFlipTime((Date.now() - startTime) / 1000);
                 setIsFlipped(true);
             };
 
-            // 3. 判定等級邏輯
             const evaluate = (isCorrect) => {
                 if (grade) return; 
                 let res = { label: 'C', color: 'text-red-500', pts: -5 };
@@ -416,79 +413,36 @@ const autoCategorize = (zh) => {
                 setGrade(res);
             };
 
-            // 4. 下一題轉場法門
             const handleNext = () => {
                 if (!grade) return;
                 onResult(grade.pts > 0, grade.pts, flipTime);
             };
-    return (
+
+            return (
                 <div className="flex-1 flex flex-col items-center justify-center space-y-10 w-full p-4">
                     <button onClick={onBack} className="btn-exit fixed top-8 left-8">儲存進度並遁走</button>
-                    
                     {grade ? (
                         <div className="text-center animate-in zoom-in duration-300 w-full flex flex-col items-center justify-center space-y-8">
                             <h2 className={`text-9xl font-black ${grade.color}`}>{grade.label} 級</h2>
                             <p className="text-slate-400 text-lg uppercase tracking-widest">
                                 {grade.pts > 0 ? `修為 +${grade.pts} PT` : `受挫 ${grade.pts} PT`}
                             </p>
-                            
-                            <button 
-                                onClick={handleNext}
-                                className="btn-gold px-12 py-4 text-xl shadow-[0_0_20px_rgba(250,204,21,0.4)] flex items-center space-x-2"
-                            >
+                            <button onClick={handleNext} className="btn-gold px-12 py-4 text-xl shadow-[0_0_20px_rgba(250,204,21,0.4)] flex items-center space-x-2">
                                 <span>感悟下一題</span>
                                 <i data-lucide="chevron-right"></i>
                             </button>
                         </div>
                     ) : (
-               
                         <div className="w-full max-w-sm space-y-8">
-                            {/* 卡片本體 */}
-                            <div 
-                                onClick={handleFlip}
-                                className={`glass rounded-[2.5rem] p-12 flex flex-col items-center justify-center min-h-[350px] transition-all duration-500 cursor-pointer ${isFlipped ? 'rotate-y-180 shadow-[0_0_40px_rgba(255,255,255,0.1)]' : 'hover:scale-105 border-yellow-500/20'}`}
-                            >
-                                <p className="text-slate-500 text-xs font-black uppercase mb-4 tracking-[0.3em]">{pos || '感悟單字'}</p>
-                                <h2 className="text-7xl font-bold text-white tracking-tighter mb-6">{word}</h2>
-                                
-                                {isFlipped ? (
-                                    <div className="text-center animate-in fade-in duration-500 border-t border-white/5 pt-6 w-full">
-                                        <p className="text-slate-400 text-sm mb-2">翻牌反應: {flipTime.toFixed(1)} 秒</p>
-                                        <h3 className="text-5xl font-black gold-text font-calligraphy">{zh}</h3>
-                                    </div>
-                                ) : (
-                                    <p className="text-slate-600 text-[10px] mt-10 animate-pulse uppercase tracking-widest">點擊翻開卡片計時</p>
-                                )}
-                            </div> 
-                        </div> /* 此處正確閉合 max-w-sm */
-                    )}
-                            {/* 判斷按鈕 */}
-                            {isFlipped && (
-                                <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-bottom duration-500">
-                                    <button onClick={() => evaluate(false)} className="glass py-6 rounded-3xl border-red-500/30 flex flex-col items-center group active:scale-95">
-                                        <i data-lucide="x-circle" className="text-red-500 mb-2 group-hover:scale-110 transition-transform"></i>
-                                        <span className="text-red-500 font-black text-sm">答錯了</span>
-                                        <span className="text-[8px] text-slate-600">打回冷宮 / 重新學習</span>
-                                    </button>
-                                    <button onClick={() => evaluate(true)} className="glass py-6 rounded-3xl border-emerald-500/30 flex flex-col items-center group active:scale-95">
-                                        <i data-lucide="check-circle" className="text-emerald-500 mb-2 group-hover:scale-110 transition-transform"></i>
-                                        <span className="text-emerald-500 font-black text-sm">答對了</span>
-                                        <span className="text-[8px] text-slate-600">根據時間拿高分</span>
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            );
+                            <div onClick={handleFlip} className={`glass rounded-[2.5rem] p-12 flex flex-col items-center justify-center min-h-[350px] transition-all duration-500 cursor-pointer ${isFlipped ? 'rotate-y-180' : 'hover:scale-105 border-yellow-500/20'}`}>
+                                <p class
         };
         // ==========================================
         // 子組件: 試煉與時光屋
         // ==========================================
         // 子組件: 今日試煉 (Trial) - 翻牌感悟版
         // ==========================================
-        const Trial = ({ user, settings, words, setView, onUpdate }) => {
-            const [r, setR] = useState(1); 
+const Trial = ({ user, settings, words, setView, onUpdate }) => {
             const [idx, setIdx] = useState(0); 
             const [q, setQ] = useState([]); 
             const [errs, setErrs] = useState([]); 
@@ -497,82 +451,65 @@ const autoCategorize = (zh) => {
             useEffect(() => {
                 if (words.length < 5) { alert("仙冊不足！"); setView('lobby'); return; }
                 if (user.stats.rounds >= settings.rounds) { alert("今日修為已滿"); setView('lobby'); return; }
-                init();
+                const picked = [...words].sort(() => 0.5 - Math.random()).slice(0, settings.questions);
+                setQ(picked);
             }, []);
 
-            const init = () => {
-                const picked = [...words].sort(() => 0.5 - Math.random()).slice(0, settings.questions);
-                setQ(picked); setIdx(0); setErrs([]); setRes(false);
-            };
-
-               const handleResult = (ok, pts, time) => {
-                const newErrs = !ok ? [...errs, q[idx]] : errs;
-                if (!ok) setErrs(newErrs);
-
-                // 建立新的修士資料，把積分算進去
+            const handleTrialResult = (ok, pts, time) => {
+                // 1. 先計算積分更新，避免直接修改 Prop
                 const updatedUser = {
                     ...user,
-                    exp: user.exp + pts // 在這裡增加積分，而不是用 +=
+                    exp: user.exp + pts
                 };
 
-                if (idx + 1 < q.length) {
-                    setIdx(idx + 1);
-                    onUpdate(updatedUser); // 即時同步修為
-                } else {
-                    handleEnd(ok, updatedUser); // 傳給結算函數
-                }
-            };
+                // 2. 處理錯誤收集
+                const currentErrs = !ok ? [...errs, q[idx]] : errs;
+                if (!ok) setErrs(currentErrs);
 
-                // 2. 判斷是否還有下一題
+                // 3. 判斷是否有下一題
                 if (idx + 1 < q.length) {
                     setIdx(idx + 1);
+                    onUpdate(updatedUser); // 即時同步積分
                 } else {
-                    // 3. 結算本輪
+                    // 4. 結算
                     const finalErrs = !ok ? [...errs, q[idx]] : errs;
-if(finalErrs.length === 0) {
-                        // 圓滿完成這 10 題，直接結算，不再循環進入下一輪
+                    if (finalErrs.length === 0) {
                         alert("此輪感悟圓滿！神識更進一步。");
-                        done(true);
-                    } else if(finalErrs.length <= settings.errors && !res) {
+                        finish(true, updatedUser);
+                    } else if (finalErrs.length <= settings.errors && !res) {
                         alert(`神識受損！開啟敗部復活重修 (共 ${finalErrs.length} 題)`);
                         setRes(true); setQ([...finalErrs]); setErrs([]); setIdx(0);
-                    } else { 
-                        alert("道心受挫，今日試煉終止！"); 
-                        done(false); 
-                    }
+                    } else {
+                        alert("道心受挫，今日試煉終止！");
+                        finish(false, updatedUser);
                     }
                 }
             };
 
-           const done = (ok) => {
-                // 採用展開運算子，確保觸發所有同步禁制
-                const updatedUser = {
-                    ...user,
-                    stats: {
-                        ...user.stats,
-                        rounds: user.stats.rounds + 1
-                    }
+            const finish = (isPerfect, finalUser) => {
+                const resultUser = {
+                    ...finalUser,
+                    stats: { ...finalUser.stats, rounds: finalUser.stats.rounds + 1 }
                 };
-                onUpdate(updatedUser);
-                if (ok) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                onUpdate(resultUser);
+                if (isPerfect) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                 setView('lobby');
             };
+
             if (!q[idx]) return null;
 
             return (
                 <div className="p-6 h-screen flex flex-col">
                     <header className="flex justify-between items-center mt-12 mb-4 px-2">
                         <div className="flex flex-col">
-                            <span className="text-xs text-slate-500 font-black uppercase tracking-widest">今日試煉 輪次 {r}</span>
+                            <span className="text-xs text-slate-500 font-black uppercase tracking-widest">今日試煉</span>
                             <span className="text-[10px] text-yellow-500/50 font-mono">進度: {idx + 1} / {q.length}</span>
                         </div>
-                        {res && <span className="bg-red-600 px-3 py-1 rounded-full text-[10px] font-black animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.5)]">重生試煉</span>}
+                        {res && <span className="bg-red-600 px-3 py-1 rounded-full text-[10px] font-black animate-pulse">重生中</span>}
                     </header>
                     <FlipEngine 
-                        word={q[idx].en} 
-                        zh={q[idx].zh} 
-                        pos={q[idx].pos} 
-                        onResult={handleResult} 
+                        word={q[idx].en} zh={q[idx].zh} pos={q[idx].pos} 
+                        onResult={handleTrialResult} 
                         onBack={() => { onUpdate(user); setView('lobby'); }} 
                     />
                 </div>
