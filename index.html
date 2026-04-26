@@ -560,39 +560,15 @@ const autoCategorize = (zh) => {
                         word={cur.en} 
                         zh={cur.zh} 
                         pos={cur.pos}
-                        onResult={(ok) => {
-                            if (ok) user.stats.spirit++;
+                        onResult={(ok, pts, time) => {
+                            if (ok) {
+                                user.stats.spirit++;
+                                // 這裡未來可以紀錄 time 供遺忘曲線使用
+                            }
                             next();
-                        } } 
+                        }}
                         onBack={() => { onUpdate(user); setView('lobby'); }} 
                     />
-                </div>
-            );
-        };
-
-            const done = (ok) => { user.stats.rounds++; onUpdate(user); if(ok) confetti(); setView('lobby'); };
-
-            if (!q[idx]) return null;
-            return (
-                <div className="p-6 h-screen flex flex-col animate-in fade-in duration-500">
-                    <header className="flex justify-between items-center mt-12 mb-4">
-                        <span className="text-xs text-slate-500 font-black">輪次 {r} - 進度 {idx+1}/{q.length}</span>
-                        {res && <span className="bg-red-600 px-3 py-1 rounded-full text-[10px] font-black animate-pulse">重生中</span>}
-                    </header>
-                    <Engine word={q[idx].en} zh={q[idx].zh} onResult={next} onBack={() => { onUpdate(user); setView('lobby'); }} />
-                </div>
-            );
-        };
-
-        const Training = ({ user, words, setView, onUpdate }) => {
-            const [cur, setCur] = useState(null);
-            useEffect(() => { if(words.length) next(); }, []);
-            const next = () => setCur(words[Math.floor(Math.random() * words.length)]);
-            if (!cur) return null;
-            return (
-                <div className="p-6 h-screen flex flex-col">
-                    <header className="flex justify-between items-center mt-12 mb-4"><span className="text-blue-400 font-black text-xs uppercase tracking-widest tracking-widest">空間累積: {user.stats.spirit}</span></header>
-                    <Engine word={cur.en} zh={cur.zh} onResult={(ok)=>{ if(ok) user.stats.spirit++; next(); }} onBack={()=>{ onUpdate(user); setView('lobby'); }} />
                 </div>
             );
         };
