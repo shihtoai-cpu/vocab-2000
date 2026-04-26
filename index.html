@@ -854,6 +854,17 @@ const Trial = ({ user, settings, words, setView, onUpdate }) => {
             setWords(nw); localStorage.setItem('sn_w', JSON.stringify(nw));
             setBatches([...batches, { id: bid, d: new Date().toLocaleString(), c: news.length }]);
             localStorage.setItem('sn_b', JSON.stringify([...batches, { id: bid, d: new Date().toLocaleString(), c: news.length }]));
+            // 將新匯入的經文同步至雲端萬界
+if (db) {
+    db.collection("global").doc("config").set({ 
+        words: nw, 
+        batches: [...batches, { id: bid, d: new Date().toLocaleString(), c: news.length }] 
+    }, { merge: true }).then(() => {
+        console.log("雲端經書同步完成");
+    }).catch(err => {
+        console.error("雲端同步失敗", err);
+    });
+}
             alert("經書匯入成功！");
         };
         r.readAsText(f);
