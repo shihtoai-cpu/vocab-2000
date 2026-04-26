@@ -194,7 +194,7 @@ const autoCategorize = (zh) => {
                         {view === 'lobby' && <Lobby user={user} settings={settings} setView={setView} onLogout={()=>setView('gate')} onUpdate={onUserUpdate} />}
                         {view === 'trial' && <Trial user={user} settings={settings} words={words} onUpdate={onUserUpdate} setView={setView} />}
                         {view === 'train' && <Training user={user} words={words} onUpdate={onUserUpdate} setView={setView} />}
-                        {view === 'admin' && <Admin settings={settings} setSettings={(s)=>persist(null,null,null,s)} words={words} setWords={(w)=>persist(null,w,null,null)} batches={batches} setBatches={(b)=>persist(null,null,b,null)} users={users} setUsers={(u)=>persist(u)} setView={setView} />}
+                        {view === 'admin' && <Admin settings={settings} setSettings={(s)=>persist(null,null,null,s)} words={words} setWords={(w)=>persist(null,w,null,null)} batches={batches} setBatches={(b)=>persist(null,null,b,null)} users={users} setUsers={(u)=>persist(u)} setView={setView} curUser={user} setCurUser={setUser} />}
                     </div>
                 </div>
             );
@@ -639,18 +639,21 @@ const autoCategorize = (zh) => {
             <div className="pt-4 pb-12">
                 <button 
                     onClick={() => {
-                        // 執行最終存檔
-                        localStorage.setItem('sn_s', JSON.stringify(settings));
-                        localStorage.setItem('sn_u', JSON.stringify(users));
-                        localStorage.setItem('sn_w', JSON.stringify(words));
-                        localStorage.setItem('sn_b', JSON.stringify(batches));
-                        
-                        // 若有 Firebase，此處可觸發一次手動同步
-                        // db.collection("global").doc("config").set({ settings, words, batches });
-                        
-                        alert("主宰法旨已封存，天道法則更新完成！");
-                        setView('lobby');
-                    }}
+                    // 1. 執行基礎存檔
+                    localStorage.setItem('sn_s', JSON.stringify(settings));
+                    localStorage.setItem('sn_u', JSON.stringify(users));
+                    localStorage.setItem('sn_w', JSON.stringify(words));
+                    localStorage.setItem('sn_b', JSON.stringify(batches));
+                    
+                    // 2. 關鍵修正：同步更新當前登入修士的「元神」
+                    if (curUser) {
+                        const updatedSelf = users.find(u => u.name === curUser.name);
+                        if (updatedSelf) setCurUser(updatedSelf);
+                    }
+                    
+                    alert("主宰法旨已封存，修為數值已同步！");
+                    setView('lobby');
+                }}
                     className="w-full py-5 btn-gold text-2xl shadow-[0_0_30px_rgba(250,204,21,0.6)] flex items-center justify-center space-x-3"
                 >
                     <i data-lucide="save"></i>
