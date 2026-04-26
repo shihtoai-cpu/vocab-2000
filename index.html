@@ -443,6 +443,7 @@ const autoCategorize = (zh) => {
                             </button>
                         </div>
                     ) : (
+                       (
                         <div className="w-full max-w-sm space-y-8">
                             {/* 卡片本體 */}
                             <div 
@@ -460,8 +461,9 @@ const autoCategorize = (zh) => {
                                 ) : (
                                     <p className="text-slate-600 text-[10px] mt-10 animate-pulse uppercase tracking-widest">點擊翻開卡片計時</p>
                                 )}
-                            </div>
-
+                            </div> 
+                        </div> /* 此處正確閉合 max-w-sm */
+                    )}
                             {/* 判斷按鈕 */}
                             {isFlipped && (
                                 <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-bottom duration-500">
@@ -534,7 +536,7 @@ if(finalErrs.length === 0) {
             };
 
            const done = (ok) => {
-                // 採用展開運算子，建立全新的物件，確保觸發所有同步禁制
+                // 採用展開運算子，確保觸發所有同步禁制
                 const updatedUser = {
                     ...user,
                     stats: {
@@ -546,7 +548,6 @@ if(finalErrs.length === 0) {
                 if (ok) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                 setView('lobby');
             };
-
             if (!q[idx]) return null;
 
             return (
