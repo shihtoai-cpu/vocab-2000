@@ -421,19 +421,17 @@ const autoCategorize = (zh) => {
                 if (!grade) return;
                 onResult(grade.pts > 0, grade.pts, flipTime);
             };
-     return (
+    return (
                 <div className="flex-1 flex flex-col items-center justify-center space-y-10 w-full p-4">
                     <button onClick={onBack} className="btn-exit fixed top-8 left-8">儲存進度並遁走</button>
                     
-                    {/* 評價顯現層 */}
-{grade ? (
+                    {grade ? (
                         <div className="text-center animate-in zoom-in duration-300 w-full flex flex-col items-center justify-center space-y-8">
                             <h2 className={`text-9xl font-black ${grade.color}`}>{grade.label} 級</h2>
                             <p className="text-slate-400 text-lg uppercase tracking-widest">
                                 {grade.pts > 0 ? `修為 +${grade.pts} PT` : `受挫 ${grade.pts} PT`}
                             </p>
                             
-                            {/* 改為明確的「下一題」按鈕，防止誤觸 */}
                             <button 
                                 onClick={handleNext}
                                 className="btn-gold px-12 py-4 text-xl shadow-[0_0_20px_rgba(250,204,21,0.4)] flex items-center space-x-2"
@@ -443,7 +441,7 @@ const autoCategorize = (zh) => {
                             </button>
                         </div>
                     ) : (
-                       (
+               
                         <div className="w-full max-w-sm space-y-8">
                             {/* 卡片本體 */}
                             <div 
@@ -507,12 +505,23 @@ const autoCategorize = (zh) => {
                 setQ(picked); setIdx(0); setErrs([]); setRes(false);
             };
 
-            const handleResult = (ok, pts, time) => {
-                // 1. 處理積分與錯誤紀錄
-                if (!ok) {
-                    setErrs(p => [...p, q[idx]]);
+               const handleResult = (ok, pts, time) => {
+                const newErrs = !ok ? [...errs, q[idx]] : errs;
+                if (!ok) setErrs(newErrs);
+
+                // 建立新的修士資料，把積分算進去
+                const updatedUser = {
+                    ...user,
+                    exp: user.exp + pts // 在這裡增加積分，而不是用 +=
+                };
+
+                if (idx + 1 < q.length) {
+                    setIdx(idx + 1);
+                    onUpdate(updatedUser); // 即時同步修為
+                } else {
+                    handleEnd(ok, updatedUser); // 傳給結算函數
                 }
-                user.exp += pts; // 直接增加由 FlipEngine 計算的積分 (S/A/B 級)
+            };
 
                 // 2. 判斷是否還有下一題
                 if (idx + 1 < q.length) {
