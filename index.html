@@ -316,8 +316,49 @@ const autoCategorize = (zh) => {
 
             // 初始同步
 // 初始同步：滅鬼邏輯 (確保雲端為準)
-            useEffect(() => {
-                const load = (k, d) => JSON.parse(localStorage.getItem(k) || d);
+            // 初始同步：萬界歸一邏輯
+useEffect(() => {
+    const load = (k, d) => JSON.parse(localStorage.getItem(k) || d);
+    
+    // 1. 載入本地設定 (作為備援)
+    setBatches(load('sn_b', '[]'));
+    const s = load('sn_s', 'null');
+    if (s) setSettings(s);
+
+    // 2. 核心：從雲端抓取「全域經書」與「系統設定」
+    if (db) {
+        // 抓取全域配置 (單字、批次、設定)
+        db.collection("global").doc("config").get().then(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                if (data.words) {
+                    setWords(data.words);
+                    localStorage.setItem('sn_w', JSON.stringify(data.words));
+                }
+                if (data.batches) {
+                    setBatches(data.batches);
+                    localStorage.setItem('sn_b', JSON.stringify(data.batches));
+                }
+                if (data.settings) {
+                    setSettings(data.settings);
+                    localStorage.setItem('sn_s', JSON.stringify(data.settings));
+                }
+                console.log("全域經書同步成功，共匯入:", data.words?.length);
+            }
+        });
+
+        // 3. 修士名單偵聽 (保持不變)
+        const unsubscribe = db.collection("users").onSnapshot(snapshot => {
+            const cloudUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setUsers(cloudUsers);
+            localStorage.setItem('sn_u', JSON.stringify(cloudUsers));
+        });
+        return () => unsubscribe();
+    } else {
+        setWords(load('sn_w', '[]'));
+        setUsers(load('sn_u', '[]'));
+    }
+}, []);
                 
                 // 1. 載入單字庫與設定 (這些變動較少，先讀取本地備緩)
                 setWords(load('sn_w', '[]'));
