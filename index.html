@@ -144,57 +144,33 @@ const autoCategorize = (zh) => {
             const [settings, setSettings] = useState({ rounds: 3, questions: 10, errors: 3, adminPw: "123456" });
 
             // 初始同步
-           // 初始同步：滅鬼邏輯 (從第147行開始替換)
-           useEffect(() => {
+// 初始同步：滅鬼邏輯 (確保雲端為準)
+            useEffect(() => {
                 const load = (k, d) => JSON.parse(localStorage.getItem(k) || d);
                 
-                // 1. 單字和設定可以先讀本地 (因為它們不常刪除)
+                // 1. 載入單字庫與設定 (這些變動較少，先讀取本地備緩)
                 setWords(load('sn_w', '[]'));
                 setBatches(load('sn_b', '[]'));
                 const s = load('sn_s', 'null');
                 if (s) setSettings(s);
 
-                // 2. 修士名單：如果有雲端，就「禁止」讀取本地，防止殘魂干擾
+                // 2. 核心：修士名單偵聽 (強制以雲端為準)
                 if (db) {
                     const unsubscribe = db.collection("users").onSnapshot(snapshot => {
                         const cloudUsers = snapshot.docs.map(doc => doc.data());
-                        // 雲端是唯一真理，直接覆蓋
+                        // 雲端是唯一真相：直接覆蓋本地，不與本地舊資料混合
                         setUsers(cloudUsers);
                         localStorage.setItem('sn_u', JSON.stringify(cloudUsers));
-                    });
-                    return () => unsubscribe();
-                } else {
-                    // 沒網路時才准讀本地
-                    setUsers(load('sn_u', '[]'));
-                }
-            }, []);
-                
-                // A. 載入單字庫與設定 (這些通常不常變動)
-                setWords(load('sn_w', '[]'));
-                setBatches(load('sn_b', '[]'));
-                const s = load('sn_s', 'null');
-                if (s) setSettings(s);
-
-                // B. 核心：雲端修士偵聽 (強制以雲端為準，斬斷殘魂)
-                if (db) {
-                    const unsubscribe = db.collection("users").onSnapshot(snapshot => {
-                        const cloudUsers = snapshot.docs.map(doc => doc.data());
-                        
-                        // 不管雲端抓到幾個人 (甚至是 0 個)，都直接覆蓋本地
-                        setUsers(cloudUsers);
-                        localStorage.setItem('sn_u', JSON.stringify(cloudUsers));
-                        
-                        console.log("仙名冊已強制同步。目前人數:", cloudUsers.length);
+                        console.log("仙名冊已同步，雲端修士數:", cloudUsers.length);
                     }, error => {
-                        console.error("偵聽仙界失敗:", error);
+                        console.error("仙界連線中斷:", error);
                     });
                     return () => unsubscribe();
                 } else {
-                    // 若沒連上雲端，才退而求其次使用本地快取
+                    // 若無雲端連線，才使用本地修士名單
                     setUsers(load('sn_u', '[]'));
                 }
             }, []);
-
             const persist = (u, w, b, s) => {
                 // 這裡只存本地，絕對不准自動推整份名單上雲端！
                 if (u) { setUsers(u); localStorage.setItem('sn_u', JSON.stringify(u)); }
