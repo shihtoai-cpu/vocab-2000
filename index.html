@@ -256,6 +256,55 @@ const autoCategorize = (zh) => {
                 </div>
             );
         };
+        const ReverseTrain = ({ words, setView }) => {
+    const [curIdx, setCurIdx] = useState(0);
+    const [shuffled, setShuffled] = useState([]);
+
+    // 初始化隨機題庫
+    useEffect(() => {
+        if (words.length > 0) {
+            setShuffled([...words].sort(() => Math.random() - 0.5));
+        }
+    }, [words]);
+
+    const nextWord = () => {
+        if (curIdx + 1 < shuffled.length) {
+            setCurIdx(curIdx + 1);
+        } else {
+            // 全部練完後重新洗牌
+            setShuffled([...words].sort(() => Math.random() - 0.5));
+            setCurIdx(0);
+        }
+    };
+
+    if (shuffled.length === 0) return null;
+
+    return (
+        <div className="h-screen flex flex-col bg-[#020617]">
+            <header className="p-6 flex justify-between items-center mt-6">
+                <span className="text-rose-400 font-black text-xs tracking-[0.3em] uppercase">
+                    逆練模式 · 悟道中
+                </span>
+                <span className="text-slate-600 text-[10px] font-mono">
+                    已感悟: {curIdx} 卷
+                </span>
+            </header>
+
+            {/* 調用之前寫好的 HandwritingEngine，但修改 onResult 邏輯 */}
+            <HandwritingEngine 
+                word={shuffled[curIdx].en} 
+                zh={shuffled[curIdx].zh} 
+                onResult={(isCorrect) => {
+                    if (isCorrect) {
+                        // 成功後直接下一題，不計積分
+                        nextWord();
+                    }
+                }} 
+                onBack={() => setView('lobby')} 
+            />
+        </div>
+    );
+};
         const App = () => {
             const [view, setView] = useState('gate');
             const [tab, setTab] = useState('home');
@@ -683,6 +732,19 @@ const Trial = ({ user, settings, words, setView, onUpdate }) => {
             );
         };
 
+        {/* 逆練神識按鈕 */}
+<button 
+    onClick={() => setView('reverse_train')} 
+    className="w-full h-24 glass rounded-[2rem] flex items-center justify-between px-10 border-rose-500/10 hover:border-rose-500/50 group mt-4"
+>
+    <div className="text-left">
+        <h3 className="text-xl font-black text-rose-400 uppercase">逆練神識</h3>
+        <p className="text-[10px] text-slate-500">中翻英刻印 · 磨練語感不計分</p>
+    </div>
+    <div className="w-12 h-12 bg-rose-500/20 rounded-full flex items-center justify-center text-rose-500 group-hover:rotate-[180deg] transition-transform duration-700">
+        <i data-lucide="rotate-ccw" size={24}></i>
+    </div>
+</button>
         // ==========================================
         // 子組件: 天逆空間 (Training) - 自由感悟版
         // ==========================================
