@@ -508,33 +508,62 @@ const autoCategorize = (zh) => {
             </section>
 
             {/* 2. 修士名錄維護 */}
-            <section className="glass p-6 rounded-2xl space-y-4">
-                <h3 className="text-xs font-black text-purple-400 border-b border-white/5 pb-2 uppercase tracking-widest">修士名錄維護</h3>
-                <div className="space-y-6">
-                    {users.map((u, i) => (
-                        <div key={i} className="bg-slate-900/80 p-4 rounded-xl border border-yellow-500/20 space-y-4 shadow-xl">
-                            <div className="flex items-center space-x-4">
-                                <div className="relative group">
-                                    <img src={u.avatar} className="w-16 h-16 rounded-full border-2 border-yellow-500 object-cover" />
-                                    <input type="file" id={`avatar-${i}`} hidden accept="image/*" onChange={(e) => handleAvatarChange(i, e)} />
-                                    <label htmlFor={`avatar-${i}`} className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity text-[8px] text-white">易容</label>
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-bold text-yellow-500">{u.name}</p>
-                                    <p className="text-[10px] text-slate-500 italic">修為積分: {u.exp}</p>
-                                </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-2">
-                                <button onClick={()=>{const n=prompt("輸入新道號",u.name); if(n){const nu=[...users]; nu[i].name=n; setUsers(nu); localStorage.setItem('sn_u', JSON.stringify(nu));}}} className="text-[10px] bg-slate-800 p-2 rounded border border-white/5 hover:bg-slate-700">更換名號</button>
-                                <button onClick={()=>{const p=prompt("重置神識密語",u.pw); if(p){const nu=[...users]; nu[i].pw=p; setUsers(nu); localStorage.setItem('sn_u', JSON.stringify(nu));}}} className="text-[10px] bg-slate-800 p-2 rounded border border-white/5 hover:bg-slate-700">重置密碼</button>
-                                <button onClick={()=>{const e=prompt("調整積分值",u.exp); if(e){const nu=[...users]; nu[i].exp=parseInt(e); setUsers(nu); localStorage.setItem('sn_u', JSON.stringify(nu));}}} className="text-[10px] bg-slate-800 p-2 rounded border border-white/5 hover:bg-slate-700">調整修為</button>
-                                <button onClick={()=>{if(confirm(`逐出 ${u.name}？`)){const nu=users.filter(x=>x.name!==u.name); setUsers(nu); localStorage.setItem('sn_u', JSON.stringify(nu));}}} className="text-[10px] bg-red-900/30 text-red-400 p-2 rounded border border-red-500/20">逐出仙門</button>
-                            </div>
+            {/* 修士名錄維護區塊 */}
+<section className="glass p-6 rounded-2xl space-y-4">
+    <h3 className="text-xs font-black text-purple-400 border-b border-white/5 pb-2 uppercase tracking-widest">修士名錄維護</h3>
+    <div className="space-y-6">
+        {users.map((u, i) => (
+            <div key={i} className="bg-slate-900/80 p-4 rounded-xl border border-yellow-500/20 space-y-4">
+                <div className="flex items-center space-x-4">
+                    {/* 點擊頭像即可觸發更換 */}
+                    <div className="relative group">
+                        <img 
+                            src={u.avatar} 
+                            className="w-16 h-16 rounded-full border-2 border-yellow-500 object-cover cursor-pointer hover:brightness-125 transition-all" 
+                            title="點擊重塑神識顯像"
+                            onClick={() => document.getElementById(`avatar-upload-${i}`).click()}
+                        />
+                        <input 
+                            type="file" 
+                            id={`avatar-upload-${i}`} 
+                            hidden 
+                            accept="image/*" 
+                            onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = (ev) => {
+                                        const newList = [...users];
+                                        newList[i].avatar = ev.target.result;
+                                        setUsers(newList);
+                                        localStorage.setItem('sn_u', JSON.stringify(newList));
+                                        alert(`${u.name} 的顯像已更新！`);
+                                    };
+                                    reader.readAsDataURL(file);
+                                }
+                            }} 
+                        />
+                        <div className="absolute -bottom-1 -right-1 bg-yellow-500 rounded-full p-1 shadow-lg pointer-events-none">
+                            <i data-lucide="camera" size={10} className="text-black"></i>
                         </div>
-                    ))}
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-sm font-bold text-yellow-500">{u.name}</p>
+                        <p className="text-[10px] text-slate-500 italic">修為積分: {u.exp}</p>
+                    </div>
                 </div>
-            </section>
+                
+                {/* 其餘管理按鈕保持不變 */}
+                <div className="grid grid-cols-2 gap-2">
+                    <button onClick={()=>{const n=prompt("輸入新道號",u.name); if(n){const nu=[...users]; nu[i].name=n; setUsers(nu); localStorage.setItem('sn_u', JSON.stringify(nu));}}} className="text-[10px] bg-slate-800 p-2 rounded border border-white/5">更換名號</button>
+                    <button onClick={()=>{const p=prompt("重置密語",u.pw); if(p){const nu=[...users]; nu[i].pw=p; setUsers(nu); localStorage.setItem('sn_u', JSON.stringify(nu));}}} className="text-[10px] bg-slate-800 p-2 rounded border border-white/5">重置密碼</button>
+                    <button onClick={()=>{const e=prompt("調整積分",u.exp); if(e){const nu=[...users]; nu[i].exp=parseInt(e); setUsers(nu); localStorage.setItem('sn_u', JSON.stringify(nu));}}} className="text-[10px] bg-slate-800 p-2 rounded border border-white/5">調整修為</button>
+                    <button onClick={()=>{if(confirm(`逐出 ${u.name}？`)){const nu=users.filter(x=>x.name!==u.name); setUsers(nu); localStorage.setItem('sn_u', JSON.stringify(nu));}}} className="text-[10px] bg-red-900/30 text-red-400 p-2 rounded border border-red-500/20">逐出仙門</button>
+                </div>
+            </div>
+        ))}
+    </div>
+</section>
 
             {/* 3. 經書管理 */}
             <section className="glass p-6 rounded-2xl space-y-4">
