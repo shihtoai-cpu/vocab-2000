@@ -442,7 +442,7 @@ const autoCategorize = (zh) => {
         // ==========================================
         // 子組件: 仙界主宰 (Admin)
         // ==========================================
- const Admin = ({ settings, setSettings, words, setWords, batches, setBatches, users, setUsers, setView }) => {
+ const Admin = ({ settings, setSettings, words, setWords, batches, setBatches, users, setUsers, setView, curUser, setCurUser }) => {
     const [auth, setAuth] = useState(false);
     const [pw, setPw] = useState("");
 
