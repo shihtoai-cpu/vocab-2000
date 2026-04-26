@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>天逆珠：仙逆單字傳 - 拼寫試煉版</title>
+    <title>天逆珠・仙逆單字傳 - 踏天終焉</title>
     
+    <!-- PWA 配置 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#020617">
@@ -18,87 +19,37 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
-        :root {
-            --gold: #facc15;
-            --gold-glow: 0 0 20px rgba(250, 204, 21, 0.6);
-            --bg: #020617;
-        }
-
-        body {
-            font-family: 'Noto Serif TC', serif;
-            background-color: var(--bg);
-            color: #f1f5f9;
-            margin: 0;
-            overflow: hidden;
-            user-select: none;
-        }
-
+        :root { --gold: #facc15; --bg: #020617; --glass: rgba(15, 23, 42, 0.95); --error: #ef4444; }
+        body { font-family: 'Noto Serif TC', serif; background-color: var(--bg); color: #f1f5f9; margin: 0; overflow: hidden; user-select: none; }
         .font-calligraphy { font-family: 'Ma Shan Zheng', cursive; }
+        
+        /* 鎏金對比 UI */
+        .btn-gold { background: linear-gradient(135deg, #facc15 0%, #ca8a04 100%); color: #000; font-weight: 900; border-radius: 0.75rem; border: 2px solid #000; box-shadow: 0 0 20px rgba(250, 204, 21, 0.4); text-transform: uppercase; }
+        .btn-gold:active { transform: scale(0.92); filter: brightness(1.2); }
+        .btn-gold:disabled { filter: grayscale(1); opacity: 0.5; }
+        
+        .btn-exit { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.5); border-radius: 9999px; padding: 0.4rem 1rem; font-size: 0.75rem; font-weight: 800; transition: 0.3s; }
+        .btn-exit:hover { background: rgba(239, 68, 68, 0.3); }
 
-        /* 高對比按鈕 */
-        .btn-gold {
-            background-color: var(--gold);
-            color: #000;
-            font-weight: 900;
-            border-radius: 0.75rem;
-            box-shadow: var(--gold-glow);
-            transition: all 0.2s;
-            border: 2px solid #000;
-        }
-        .btn-gold:active { transform: scale(0.95); filter: brightness(1.1); }
+        .glass { background: var(--glass); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .tablet { border-left: 5px solid var(--gold); background: linear-gradient(90deg, rgba(250, 204, 21, 0.1) 0%, transparent 100%); transition: 0.3s; cursor: pointer; }
+        .tablet:hover { transform: translateX(8px); background: rgba(250, 204, 21, 0.2); }
 
-        .btn-return {
-            background: rgba(239, 68, 68, 0.2);
-            color: #f87171;
-            border: 1px solid rgba(239, 68, 68, 0.5);
-            font-size: 0.75rem;
-            padding: 0.5rem 1rem;
-            border-radius: 9999px;
-            transition: 0.3s;
-        }
-        .btn-return:hover { background: rgba(239, 68, 68, 0.4); }
+        /* 拼寫底線核心樣式 */
+        .u-line { display: inline-block; width: 1.8rem; margin: 0 0.2rem; border-bottom: 3px solid #334155; text-align: center; font-size: 2rem; font-weight: 900; color: var(--gold); height: 2.8rem; vertical-align: bottom; }
+        .u-line.filled { border-bottom-color: var(--gold); text-shadow: 0 0 10px var(--gold); }
+        .u-space { display: inline-block; width: 1.2rem; }
 
-        /* 拼寫底線 */
-        .underscore-char {
-            display: inline-block;
-            width: 2rem;
-            margin: 0 0.2rem;
-            border-bottom: 3px solid #475569;
-            text-align: center;
-            font-size: 2rem;
-            font-weight: 900;
-            color: var(--gold);
-            height: 3rem;
-            vertical-align: bottom;
-        }
-        .underscore-char.filled {
-            border-bottom-color: var(--gold);
-            text-shadow: var(--gold-glow);
-        }
-        .underscore-space {
-            display: inline-block;
-            width: 1.5rem;
-        }
-
-        /* 魂碑 */
-        .tablet {
-            border-left: 5px solid var(--gold);
-            background: linear-gradient(90deg, rgba(250, 204, 21, 0.1) 0%, transparent 100%);
-            transition: 0.3s;
-        }
-        .tablet:hover { background: rgba(250, 204, 21, 0.2); transform: translateX(8px); }
-
-        .bead-vortex {
-            position: fixed;
-            top: 50%; left: 50%;
-            width: 100vw; height: 100vw;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
-            z-index: -1; transform: translate(-50%, -50%);
-            animation: spin 180s linear infinite;
-        }
+        /* 旋轉天逆珠背景 */
+        .vortex { position: fixed; top: 50%; left: 50%; width: 120vw; height: 120vw; background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 70%); z-index: -1; transform: translate(-50%, -50%); animation: spin 200s linear infinite; }
         @keyframes spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-        .glass { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        /* 進度條 */
+        .bar-container { height: 10px; background: #0f172a; border-radius: 5px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+        .bar-fill { height: 100%; background: linear-gradient(90deg, #ca8a04, #facc15, #fef08a); box-shadow: 0 0 15px var(--gold); transition: width 1s ease-in-out; }
+        
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -111,7 +62,7 @@
         const { useState, useEffect, useRef, useMemo } = React;
 
         // ==========================================
-        // 1. Firebase 配置 (前輩的配置)
+        // Firebase 配置 (前輩的 API)
         // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
@@ -121,157 +72,143 @@
             messagingSenderId: "459452518715",
             appId: "1:459452518715:web:2842926df8a8d73831a71e"
         };
-
-        let db = null;
-        try {
-            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-        } catch (e) { console.error("Firebase Connect Fail"); }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
         // ==========================================
-        // 2. 境界系統
+        // 境界體系 (100% 遵照前輩指令)
         // ==========================================
         const QI = Array.from({ length: 15 }, (_, i) => `凝氣期 ${i + 1} 層`);
         const STAGES = ["初期", "中期", "後期", "後期巔峰", "圓滿"];
         const REALMS = [
-            { name: "凡人", subs: ["一介凡夫"], color: "text-slate-400" },
-            { name: "凝氣", subs: QI, color: "text-emerald-400" },
-            { name: "築基", subs: [...STAGES, "假丹"], color: "text-blue-400" },
-            { name: "結丹", subs: [...STAGES, "假嬰"], color: "text-purple-400" },
-            { name: "元嬰", subs: STAGES, color: "text-pink-400" },
-            { name: "化神", subs: STAGES, color: "text-orange-400" },
-            { name: "嬰變", subs: STAGES, color: "text-rose-500" },
-            { name: "問鼎", subs: STAGES, color: "text-amber-500" },
-            { name: "陰虛", subs: STAGES, color: "text-indigo-500" },
-            { name: "陽實", subs: STAGES, color: "text-yellow-500" },
-            { name: "窺涅", subs: STAGES, color: "text-cyan-400" },
-            { name: "淨涅", subs: STAGES, color: "text-sky-400" },
-            { name: "碎涅", subs: STAGES, color: "text-indigo-400" },
-            { name: "空涅", subs: STAGES, color: "text-blue-600" },
-            { name: "空靈", subs: STAGES, color: "text-purple-600" },
-            { name: "空玄", subs: STAGES, color: "text-rose-600" },
-            { name: "空劫", subs: ["大尊初期", "大尊中期", "大尊後期", "金尊", "天尊", "躍天尊"], color: "text-red-700" },
-            { name: "半步踏天", subs: ["第一橋", "第二橋", "第三橋", "第四橋", "第五橋", "第六橋", "第七橋", "第八橋"], color: "text-yellow-500" },
-            { name: "踏天境", subs: ["第九橋(永恆)"], color: "text-yellow-200" }
+            { n: "凡人", s: ["一介凡夫"], c: "text-slate-500" },
+            { n: "凝氣", s: QI, c: "text-emerald-400" },
+            { n: "築基", s: [...STAGES, "假丹"], c: "text-blue-400" },
+            { n: "結丹", s: [...STAGES, "假嬰"], c: "text-purple-400" },
+            { n: "元嬰", s: STAGES, c: "text-pink-400" },
+            { n: "化神", s: STAGES, c: "text-orange-400" },
+            { n: "嬰變", s: STAGES, c: "text-rose-500" },
+            { n: "問鼎", s: STAGES, c: "text-amber-500" },
+            { n: "陰虛", s: STAGES, c: "text-indigo-500" },
+            { n: "陽實", s: STAGES, c: "text-yellow-500" },
+            { n: "窺涅", s: STAGES, c: "text-cyan-400" },
+            { n: "淨涅", s: STAGES, c: "text-sky-400" },
+            { n: "碎涅", s: STAGES, c: "text-indigo-400" },
+            { n: "空涅", s: STAGES, c: "text-blue-600" },
+            { n: "空靈", s: STAGES, c: "text-purple-600" },
+            { n: "空玄", s: STAGES, c: "text-rose-600" },
+            { n: "空劫", s: ["大尊初期", "大尊中期", "大尊後期", "金尊", "天尊", "躍天尊"], c: "text-red-700" },
+            { n: "半步踏天", s: ["第一橋", "第二橋", "第三橋", "第四橋", "第五橋", "第六橋", "第七橋", "第八橋"], c: "text-yellow-500" },
+            { n: "踏天境", s: ["第九橋(永恆)"], c: "text-yellow-200" }
         ];
-
-        const ALL_STAGES = REALMS.flatMap(r => r.subs.map(s => ({ m: r.name, s: s, c: r.color })));
-
-        const getExpForLevel = (idx) => {
-            if (idx < 15) return 100 + idx * 30;
-            return Math.floor(250 * Math.pow(1.18, idx - 14) + 40 * Math.pow(idx, 2.1));
-        };
+        const ALL_SUB = REALMS.flatMap(r => r.s.map(s => ({ m: r.n, s, c: r.c })));
 
         const getRealmInfo = (exp) => {
-            let total = 0;
-            for (let i = 0; i < ALL_STAGES.length; i++) {
-                const req = getExpForLevel(i);
-                if (exp < total + req) return { ...ALL_STAGES[i], idx: i, current: total, next: total + req };
-                total += req;
+            let acc = 0;
+            for (let i = 0; i < ALL_SUB.length; i++) {
+                const req = i < 15 ? 100 + i * 20 : Math.floor(250 * Math.pow(1.18, i-14) + 40 * Math.pow(i, 2));
+                if (exp < acc + req) return { ...ALL_SUB[i], idx: i, current: acc, next: acc + req };
+                acc += req;
             }
-            return { ...ALL_STAGES[ALL_STAGES.length-1], idx: ALL_STAGES.length-1, current: total, next: Infinity };
+            return { ...ALL_SUB[ALL_SUB.length-1], idx: ALL_SUB.length-1, current: acc, next: Infinity };
         };
 
         // ==========================================
-        // 3. 主應用核心
+        // 核心邏輯模組
         // ==========================================
         const App = () => {
-            const [view, setView] = useState('hall'); 
+            const [view, setView] = useState('gate'); 
             const [users, setUsers] = useState([]);
-            const [curUser, setCurUser] = useState(null);
+            const [user, setUser] = useState(null);
             const [words, setWords] = useState([]);
             const [batches, setBatches] = useState([]);
-            const [settings, setSettings] = useState({ maxRounds: 3, qPerRound: 10, maxErr: 3, adminPw: "123456" });
+            const [settings, setSettings] = useState({ rounds: 3, questions: 10, errors: 3, adminPw: "123456" });
 
+            // 初始同步
             useEffect(() => {
-                const load = (k, d) => JSON.parse(localStorage.getItem(k) || d);
-                setUsers(load('sn_users', '[]'));
-                setWords(load('sn_words', '[]'));
-                setBatches(load('sn_batches', '[]'));
-                const s = load('sn_settings', 'null');
-                if (s) setSettings(s);
+                const lUsers = JSON.parse(localStorage.getItem('sn_u') || '[]');
+                const lWords = JSON.parse(localStorage.getItem('sn_w') || '[]');
+                const lBatches = JSON.parse(localStorage.getItem('sn_b') || '[]');
+                const lSets = JSON.parse(localStorage.getItem('sn_s') || 'null');
+                setUsers(lUsers); setWords(lWords); setBatches(lBatches);
+                if (lSets) setSettings(lSets);
+                
+                if (db) {
+                    db.collection("users").onSnapshot(s => {
+                        const list = s.docs.map(d => d.data());
+                        if(list.length) { setUsers(list); localStorage.setItem('sn_u', JSON.stringify(list)); }
+                    });
+                }
             }, []);
 
             const persist = (u, w, b, s) => {
-                if (u) { setUsers(u); localStorage.setItem('sn_users', JSON.stringify(u)); }
-                if (w) { setWords(w); localStorage.setItem('sn_words', JSON.stringify(w)); }
-                if (b) { setBatches(b); localStorage.setItem('sn_batches', JSON.stringify(b)); }
-                if (s) { setSettings(s); localStorage.setItem('sn_settings', JSON.stringify(s)); }
+                if (u) { setUsers(u); localStorage.setItem('sn_u', JSON.stringify(u)); if(db) u.forEach(x => db.collection("users").doc(x.name).set(x)); }
+                if (w) { setWords(w); localStorage.setItem('sn_w', JSON.stringify(w)); }
+                if (b) { setBatches(b); localStorage.setItem('sn_b', JSON.stringify(b)); }
+                if (s) { setSettings(s); localStorage.setItem('sn_s', JSON.stringify(s)); }
             };
 
-            const userUpdate = (updated) => {
-                const newList = users.map(u => u.name === updated.name ? updated : u);
-                persist(newList);
-                setCurUser(updated);
+            const onUserUpdate = (updated) => {
+                const newList = users.map(x => x.name === updated.name ? updated : x);
+                persist(newList); setUser(updated);
             };
 
             return (
-                <div className="relative min-h-screen">
-                    <div className="bead-vortex"></div>
-                    {view === 'hall' && <HallView users={users} setView={setView} onLogin={setCurUser} />}
-                    {view === 'reg' && <RegisterView onBack={() => setView('hall')} onDone={(u) => { persist([...users, u]); setView('hall'); }} />}
-                    {view === 'dash' && <Dashboard user={curUser} setView={setView} settings={settings} onLogout={() => { setCurUser(null); setView('hall'); }} onUpdate={userUpdate} words={words} />}
-                    {view === 'trial' && <TrialView user={curUser} settings={settings} words={words} onUpdate={userUpdate} setView={setView} />}
-                    {view === 'train' && <TrainingView user={curUser} words={words} onUpdate={userUpdate} setView={setView} />}
-                    {view === 'admin' && <AdminView settings={settings} setSettings={(s) => persist(null,null,null,s)} words={words} setWords={(w) => persist(null,w,null,null)} batches={batches} setBatches={(b) => persist(null,null,b,null)} users={users} setUsers={(u)=>persist(u)} setView={setView} />}
+                <div className="relative min-h-screen flex flex-col items-center overflow-hidden">
+                    <div className="vortex"></div>
+                    <div className="relative z-10 w-full max-w-md min-h-screen flex flex-col">
+                        {view === 'gate' && <Gate users={users} setView={setView} setUser={setUser} />}
+                        {view === 'reg' && <Register onBack={()=>setView('gate')} onDone={(u)=>{ persist([...users, u]); setView('gate'); }} />}
+                        {view === 'lobby' && <Lobby user={user} settings={settings} setView={setView} onLogout={()=>setView('gate')} onUpdate={onUserUpdate} />}
+                        {view === 'trial' && <Trial user={user} settings={settings} words={words} onUpdate={onUserUpdate} setView={setView} />}
+                        {view === 'train' && <Training user={user} words={words} onUpdate={onUserUpdate} setView={setView} />}
+                        {view === 'admin' && <Admin settings={settings} setSettings={(s)=>persist(null,null,null,s)} words={words} setWords={(w)=>persist(null,w,null,null)} batches={batches} setBatches={(b)=>persist(null,null,b,null)} users={users} setUsers={(u)=>persist(u)} setView={setView} />}
+                    </div>
                 </div>
             );
         };
 
         // ==========================================
-        // 4. 子組件：仙魂碑大廳 (初始畫面)
+        // 子組件: 仙魂碑入口 (Gate)
         // ==========================================
-        const HallView = ({ users, setView, onLogin }) => {
+        const Gate = ({ users, setView, setUser }) => {
             const [target, setTarget] = useState(null);
             const [pw, setPw] = useState("");
-
-            const login = () => {
-                if (pw === target.pw) {
-                    const today = new Date().toDateString();
-                    if (target.stats.lastDate !== today) {
-                        target.stats = { ...target.stats, lastDate: today, rounds: 0, spirit: 0 };
-                    }
-                    onLogin(target);
-                    setView('dash');
-                } else { alert("神識不匹配！"); }
-            };
-
             return (
-                <div className="p-6 h-screen flex flex-col">
-                    <header className="text-center py-10">
-                        <h1 className="text-5xl font-calligraphy gold-text">仙魂碑大廳</h1>
-                        <p className="text-slate-500 text-xs tracking-widest mt-2 uppercase">點擊魂碑 喚醒神識</p>
-                    </header>
-                    <div className="flex-1 overflow-y-auto space-y-4">
+                <div className="flex-1 flex flex-col p-6 animate-in fade-in duration-700">
+                    <div className="text-center py-10 space-y-2">
+                        <h1 className="text-5xl font-calligraphy gold-text">仙界入口</h1>
+                        <p className="text-slate-500 text-[10px] tracking-[0.4em] uppercase">喚醒神識・再續前緣</p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-4 pr-1">
                         {users.map((u, i) => {
                             const info = getRealmInfo(u.exp);
                             return (
-                                <div key={i} onClick={() => { setTarget(u); setPw(""); }} className="tablet p-4 rounded-xl flex items-center space-x-4 cursor-pointer">
-                                    <img src={u.avatar} className="w-12 h-12 rounded-full border border-yellow-500/30 object-cover" />
+                                <div key={i} onClick={()=>{setTarget(u); setPw("");}} className="tablet p-5 rounded-xl flex items-center space-x-4">
+                                    <img src={u.avatar} className="w-14 h-14 rounded-full border-2 border-yellow-500/30 object-cover" />
                                     <div className="flex-1">
-                                        <div className="flex justify-between">
+                                        <div className="flex justify-between items-start">
                                             <span className="font-bold text-lg">{u.name}</span>
-                                            <span className="text-[10px] text-slate-500 font-mono">積分: {u.exp}</span>
+                                            <span className="text-[10px] text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">積分: {u.exp}</span>
                                         </div>
-                                        <p className={`text-[10px] font-black uppercase ${info.c}`}>{info.m}・{info.s}</p>
+                                        <p className={`text-[10px] font-black uppercase mt-1 ${info.c}`}>{info.m}・{info.s}</p>
                                     </div>
                                 </div>
                             );
                         })}
-                        <button onClick={() => setView('reg')} className="w-full py-6 border-2 border-dashed border-slate-700 rounded-xl text-slate-500 hover:text-yellow-500 transition-all flex flex-col items-center">
-                            <i data-lucide="user-plus" className="mb-1"></i>
-                            <span className="text-xs font-bold uppercase">註冊修士</span>
+                        <button onClick={()=>setView('reg')} className="w-full py-8 border-2 border-dashed border-slate-700 rounded-2xl flex flex-col items-center justify-center text-slate-500 hover:text-yellow-500 transition-all group">
+                            <i data-lucide="user-plus" className="mb-2"></i>
+                            <span className="text-xs font-bold uppercase">註冊新修士</span>
                         </button>
                     </div>
-
                     {target && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
                             <div className="glass w-full max-w-xs p-8 rounded-3xl text-center space-y-6">
                                 <h3 className="text-xl font-bold">修士 {target.name}</h3>
-                                <input type="password" placeholder="神識密語" className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl text-center focus:border-yellow-500 outline-none text-white text-2xl" value={pw} onChange={e => setPw(e.target.value)} autoFocus onKeyUp={e => e.key === 'Enter' && login()} />
+                                <input type="password" placeholder="輸入密語" className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl text-center focus:border-yellow-500 outline-none text-2xl" value={pw} onChange={e=>setPw(e.target.value)} autoFocus onKeyUp={e=>e.key==='Enter' && (pw===target.pw ? (setUser(target), setView('lobby')) : alert("錯"))} />
                                 <div className="flex space-x-2">
-                                    <button onClick={() => setTarget(null)} className="flex-1 py-3 text-slate-500">取消</button>
-                                    <button onClick={login} className="flex-2 btn-gold p-3">確認進入</button>
+                                    <button onClick={()=>setTarget(null)} className="flex-1 py-3 text-slate-500">返回</button>
+                                    <button onClick={()=>(pw===target.pw ? (setUser(target), setView('lobby')) : alert("錯"))} className="flex-2 btn-gold p-3 px-8">確認</button>
                                 </div>
                             </div>
                         </div>
@@ -280,357 +217,248 @@
             );
         };
 
-        // ==========================================
-        // 5. 子組件：修士註冊 (Register)
-        // ==========================================
-        const RegisterView = ({ onBack, onDone }) => {
-            const [n, setN] = useState("");
-            const [p, setP] = useState("");
-            const [a, setA] = useState("");
-            const [pos, setPos] = useState({ x: 0, y: 0, scale: 1 });
-            const isDrag = useRef(false);
-            const last = useRef({ x: 0, y: 0 });
-
-            const handleFile = (e) => {
-                const f = e.target.files[0];
-                if (f) {
-                    const r = new FileReader();
-                    r.onload = (ev) => { setA(ev.target.result); setPos({x:0, y:0, scale:1}); };
-                    r.readAsDataURL(f);
-                }
+        const Register = ({ onBack, onDone }) => {
+            const [n, setN] = useState(""); const [p, setP] = useState(""); const [a, setA] = useState("");
+            const hFile = (e) => {
+                const f = e.target.files[0]; if(f){ const r=new FileReader(); r.onload=(ev)=>setA(ev.target.result); r.readAsDataURL(f); }
             };
-
-            const dragStart = (e) => { isDrag.current = true; const t = e.touches ? e.touches[0] : e; last.current = { x: t.clientX, y: t.clientY }; };
-            const dragMove = (e) => {
-                if (!isDrag.current) return;
-                const t = e.touches ? e.touches[0] : e;
-                const dx = t.clientX - last.current.x;
-                const dy = t.clientY - last.current.y;
-                setPos(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
-                last.current = { x: t.clientX, y: t.clientY };
-            };
-
             return (
-                <div className="p-8 flex flex-col items-center justify-center min-h-screen space-y-8">
-                    <h2 className="text-3xl font-calligraphy gold-text">登載仙冊</h2>
-                    <div className="relative">
-                        <div className="avatar-circle overflow-hidden w-32 h-32 rounded-full border-2 border-yellow-500 bg-slate-900" onMouseDown={dragStart} onMouseMove={dragMove} onMouseUp={() => isDrag.current=false} onTouchStart={dragStart} onTouchMove={dragMove} onTouchEnd={() => isDrag.current=false}>
-                            {a ? <img src={a} className="avatar-img pointer-events-none" style={{ transform: `translate(${pos.x}px, ${pos.y}px) scale(${pos.scale})` }} /> : <div className="w-full h-full flex items-center justify-center text-xs">上傳顯像</div>}
-                        </div>
-                        <input type="file" id="u" hidden onChange={handleFile} accept="image/*" />
-                        <label htmlFor="u" className="absolute bottom-0 right-0 p-2 btn-gold rounded-full cursor-pointer"><i data-lucide="camera" size={16}></i></label>
+                <div className="p-8 flex flex-col items-center justify-center min-h-screen space-y-8 animate-in slide-in-from-bottom">
+                    <h2 className="text-4xl font-calligraphy gold-text">初登仙冊</h2>
+                    <div className="w-32 h-32 rounded-full border-4 border-yellow-500 bg-slate-800 overflow-hidden relative">
+                        {a ? <img src={a} className="w-full h-full object-cover" /> : <div className="p-8 text-center text-[10px]">上傳影像</div>}
+                        <input type="file" id="u" hidden onChange={hFile} accept="image/*" />
+                        <label htmlFor="u" className="absolute inset-0 cursor-pointer"></label>
                     </div>
                     <div className="w-full space-y-4">
-                        <input placeholder="修士道號" className="w-full bg-slate-900 p-4 rounded-xl border border-white/5 outline-none focus:border-yellow-500 text-white" value={n} onChange={e => setN(e.target.value)} />
-                        <input type="password" placeholder="神識密語" className="w-full bg-slate-900 p-4 rounded-xl border border-white/5 outline-none focus:border-yellow-500 text-white" value={p} onChange={e => setP(e.target.value)} />
+                        <input placeholder="名號" className="w-full bg-slate-900 p-4 rounded-xl border border-white/5 outline-none focus:border-yellow-500" value={n} onChange={e=>setN(e.target.value)} />
+                        <input type="password" placeholder="神識密語" className="w-full bg-slate-900 p-4 rounded-xl border border-white/5 outline-none focus:border-yellow-500" value={p} onChange={e=>setP(e.target.value)} />
                     </div>
                     <div className="w-full flex space-x-4">
-                        <button onClick={onBack} className="flex-1 btn-slate p-4">返回</button>
-                        <button onClick={() => (n && p && a) ? onDone({ name: n, pw: p, avatar: a, exp: 0, stats: { rounds: 0, spirit: 0, lastDate: new Date().toDateString() }}) : alert("資料未全")} className="flex-2 btn-gold p-4">確認入冊</button>
+                        <button onClick={onBack} className="flex-1 py-4 text-slate-500">返回</button>
+                        <button onClick={()=> (n && p && a) ? onDone({ name: n, pw: p, avatar: a, exp: 0, stats: { rounds: 0, spirit: 0, lastDate: new Date().toDateString() }}) : alert("不全")} className="flex-2 btn-gold p-4 px-10">確認入冊</button>
                     </div>
                 </div>
             );
         };
 
         // ==========================================
-        // 6. 子組件：修士洞府 (Dashboard)
+        // 子組件: 修士洞府 (Lobby)
         // ==========================================
-        const Dashboard = ({ user, settings, setView, onLogout, onUpdate }) => {
+        const Lobby = ({ user, settings, setView, onLogout, onUpdate }) => {
             const info = getRealmInfo(user.exp);
             const prog = ((user.exp - info.current) / (info.next - info.current)) * 100;
-
-            useEffect(() => { lucide.createIcons(); }, []);
+            
+            useEffect(() => {
+                const today = new Date().toDateString();
+                if(user.stats.lastDate !== today) { user.stats.rounds = 0; user.stats.spirit = 0; user.stats.lastDate = today; onUpdate(user); }
+                lucide.createIcons();
+            }, []);
 
             return (
-                <div className="p-6 flex flex-col h-screen space-y-6">
+                <div className="p-6 flex flex-col h-screen space-y-6 pb-24">
                     <header className="flex justify-between items-center mt-6">
-                        <div className="flex items-center space-x-3">
-                            <img src={user.avatar} className="w-14 h-14 rounded-full border-2 border-yellow-500 object-cover" />
+                        <div className="flex items-center space-x-4">
+                            <img src={user.avatar} className="w-16 h-16 rounded-full border-2 border-yellow-500 object-cover shadow-2xl" />
                             <div>
-                                <h2 className="text-xl font-bold">{user.name}</h2>
-                                <p className={`text-[10px] font-black uppercase ${info.c}`}>{info.m}・{info.s}</p>
+                                <h2 className="text-2xl font-bold">{user.name}</h2>
+                                <p className={`text-[11px] font-black uppercase ${info.c}`}>{info.m}・{info.s}</p>
                             </div>
                         </div>
-                        <button onClick={() => setView('admin')} className="p-3 glass rounded-full text-yellow-500"><i data-lucide="shield-check"></i></button>
+                        <button onClick={()=>setView('admin')} className="p-4 glass rounded-full text-yellow-500"><i data-lucide="shield-check"></i></button>
                     </header>
 
-                    <div className="glass p-6 rounded-3xl space-y-4">
-                        <div className="flex justify-between text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-                            <span>修為進度</span>
-                            <span className="text-yellow-500">{user.exp.toLocaleString()} / {info.next.toLocaleString()}</span>
-                        </div>
-                        <div className="progress-container"><div className="progress-bar" style={{ width: `${Math.min(100, prog)}%` }}></div></div>
-                        <p className="text-[10px] text-center text-slate-500">突破至下一境界還需 {info.next - user.exp} 積分</p>
+                    <div className="glass p-7 rounded-[2rem] space-y-4">
+                        <div className="flex justify-between text-[10px] font-black tracking-widest text-slate-500 uppercase"><span>修為進度</span><span>{user.exp.toLocaleString()} / {info.next.toLocaleString()}</span></div>
+                        <div className="bar-container"><div className="bar-fill" style={{ width: `${Math.min(100, prog)}%` }}></div></div>
+                        <p className="text-[10px] text-center text-slate-500 italic">距離突破還需 {info.next - user.exp} 積分</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="glass p-4 rounded-xl text-center">
-                            <p className="text-[10px] text-slate-500 uppercase">今日試煉</p>
-                            <p className="text-xl font-black text-emerald-400">{user.stats.rounds} / {settings.maxRounds}</p>
-                        </div>
-                        <div className="glass p-4 rounded-xl text-center">
-                            <p className="text-[10px] text-slate-500 uppercase">時光屋累積</p>
-                            <p className="text-xl font-black text-blue-400">{user.stats.spirit} 題</p>
-                        </div>
+                        <div className="glass p-5 rounded-3xl text-center"><p className="text-[10px] text-slate-500 font-bold">今日試煉</p><p className="text-3xl font-black text-emerald-400 font-mono">{user.stats.rounds} / {settings.rounds}</p></div>
+                        <div className="glass p-5 rounded-3xl text-center"><p className="text-[10px] text-slate-500 font-bold">時光屋</p><p className="text-3xl font-black text-blue-400 font-mono">{user.stats.spirit} 題</p></div>
                     </div>
 
-                    <div className="flex-1 space-y-4 overflow-y-auto">
-                        <button onClick={() => setView('trial')} className="w-full h-24 glass rounded-3xl flex items-center justify-between px-8 hover:border-yellow-500/50 group">
-                            <div className="text-left"><h3 className="text-xl font-bold gold-text">三輪試煉</h3><p className="text-[10px] text-slate-500">獲取大量積分</p></div>
-                            <div className="w-12 h-12 btn-gold rounded-full flex items-center justify-center text-black"><i data-lucide="sword"></i></div>
+                    <div className="flex-1 space-y-5">
+                        <button onClick={()=>setView('trial')} className="w-full h-32 glass rounded-[2.5rem] flex items-center justify-between px-10 border-yellow-500/10 hover:border-yellow-500/50 group">
+                            <div className="text-left"><h3 className="text-2xl font-black gold-text uppercase">三輪試煉</h3><p className="text-[10px] text-slate-500">生死關頭 提升修為</p></div>
+                            <div className="w-16 h-16 btn-gold rounded-full flex items-center justify-center text-black group-hover:rotate-12 transition-transform"><i data-lucide="sword" size={32}></i></div>
                         </button>
-                        <button onClick={() => setView('train')} className="w-full h-24 glass rounded-3xl flex items-center justify-between px-8 hover:border-blue-500/50 group">
-                            <div className="text-left"><h3 className="text-xl font-bold text-blue-400">天逆空間</h3><p className="text-[10px] text-slate-500">神識磨練(不計分)</p></div>
-                            <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-black"><i data-lucide="zap"></i></div>
+                        <button onClick={()=>setView('train')} className="w-full h-32 glass rounded-[2.5rem] flex items-center justify-between px-10 border-blue-500/10 hover:border-blue-500/50 group">
+                            <div className="text-left"><h3 className="text-2xl font-black text-blue-400 uppercase">天逆空間</h3><p className="text-[10px] text-slate-500">精神時光屋 磨練神識</p></div>
+                            <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-black group-hover:rotate-[-12deg] transition-transform"><i data-lucide="zap" size={32}></i></div>
                         </button>
                     </div>
-                    <button onClick={onLogout} className="text-slate-600 text-[10px] tracking-widest uppercase">神魂離體 (登出)</button>
+                    <button onClick={onLogout} className="text-slate-600 text-xs font-black tracking-[0.5em] uppercase py-4">神魂離體 (登出)</button>
                 </div>
             );
         };
 
         // ==========================================
-        // 7. 子組件：核心拼寫引擎 (Spelling Engine)
+        // 子組件: 拼寫核心引擎 (SpellingEngine)
         // ==========================================
-        const SpellingEngine = ({ word, onResult, onExit }) => {
-            const [input, setInput] = useState("");
-            const [showAnswer, setShowAnswer] = useState(false);
-            const [isCorrect, setIsCorrect] = useState(null);
+        const Engine = ({ word, zh, onResult, onBack }) => {
+            const [val, setVal] = useState("");
+            const [fb, setFb] = useState(null); // 'ok', 'no'
+            const [reveal, setReveal] = useState(false);
 
-            const handleSubmit = () => {
-                const normalizedInput = input.trim().toLowerCase();
-                const normalizedWord = word.toLowerCase();
-                if (normalizedInput === normalizedWord) {
-                    setIsCorrect(true);
-                    setTimeout(() => { reset(); onResult(true); }, 800);
+            const submit = () => {
+                if (val.trim().toLowerCase() === word.trim().toLowerCase()) {
+                    setFb('ok');
+                    setTimeout(() => { setVal(""); setFb(null); onResult(true); }, 800);
                 } else {
-                    setIsCorrect(false);
-                    setShowAnswer(true);
-                    setTimeout(() => { 
-                        setShowAnswer(false);
-                        setIsCorrect(null);
-                        reset();
-                        onResult(false); 
-                    }, 2500);
+                    setFb('no'); setReveal(true);
+                    setTimeout(() => { setVal(""); setFb(null); setReveal(false); onResult(false); }, 3500);
                 }
             };
 
-            const reset = () => { setInput(""); setShowAnswer(false); setIsCorrect(null); };
-
-            // 渲染底線
-            const renderUnderscores = () => {
+            const renderLines = () => {
                 let charIdx = 0;
                 return word.split('').map((char, i) => {
-                    if (char === ' ') return <span key={i} className="underscore-space" />;
-                    const currentFilledChar = input[charIdx] || "";
-                    charIdx++;
-                    return (
-                        <span key={i} className={`underscore-char ${currentFilledChar ? 'filled' : ''}`}>
-                            {currentFilledChar}
-                        </span>
-                    );
+                    if (char === ' ') return <span key={i} className="u-space" />;
+                    const filled = val[charIdx] || ""; charIdx++;
+                    return <span key={i} className={`u-line ${filled ? 'filled' : ''}`}>{filled}</span>;
                 });
             };
 
             return (
-                <div className="flex-1 flex flex-col items-center justify-center space-y-12 w-full max-w-sm mx-auto">
-                    <button onClick={onExit} className="fixed top-6 left-6 btn-return">儲存進度並返回</button>
-                    
-                    <div className="flex flex-wrap justify-center items-end min-h-[4rem]">
-                        {renderUnderscores()}
+                <div className="flex-1 flex flex-col items-center justify-center space-y-12 w-full">
+                    <button onClick={onBack} className="btn-exit fixed top-8 left-8">儲存進度並遁走</button>
+                    <div className="text-center space-y-4">
+                        <p className="text-slate-500 text-xs font-black tracking-widest">請感悟真意</p>
+                        <h2 className="text-7xl font-bold tracking-tighter text-white">{zh}</h2>
                     </div>
-
-                    <div className="w-full relative">
-                        <input 
-                            autoFocus 
-                            className="opacity-0 absolute inset-0 cursor-default" 
-                            value={input} 
-                            onChange={(e) => {
-                                const cleanInput = e.target.value.replace(/\s/g, '');
-                                const targetLen = word.replace(/\s/g, '').length;
-                                if (cleanInput.length <= targetLen) setInput(cleanInput);
-                            }}
-                            onKeyUp={(e) => e.key === 'Enter' && handleSubmit()}
-                        />
-                        <p className="text-center text-slate-500 text-xs animate-pulse">請直接點擊螢幕輸入單字並按回車</p>
+                    <div className="flex flex-wrap justify-center py-6 px-4">{renderLines()}</div>
+                    <div className="w-full px-8 relative">
+                        <input autoFocus className="opacity-0 absolute inset-0 w-full h-full cursor-default" value={val} 
+                               onChange={e => { const v = e.target.value.replace(/ /g, ''); if(v.length <= word.replace(/ /g, '').length) setVal(v); }} 
+                               onKeyUp={e => e.key === 'Enter' && !fb && submit()} />
+                        
+                        {reveal ? (
+                            <div className="text-center space-y-3 animate-bounce">
+                                <p className="text-red-500 font-black text-sm uppercase">感悟失敗！正確答案：</p>
+                                <p className="text-5xl font-black text-white tracking-widest underline decoration-red-500 decoration-4">{word.toUpperCase()}</p>
+                            </div>
+                        ) : (
+                            <button onClick={submit} className="w-full py-5 btn-gold text-2xl shadow-2xl">確認真意 (送出)</button>
+                        )}
+                        <p className="text-center text-slate-600 text-[10px] mt-6 uppercase tracking-widest animate-pulse">直接輸入字母並按 Enter 鍵</p>
                     </div>
-
-                    {showAnswer && (
-                        <div className="text-center space-y-2 animate-in fade-in slide-in-from-top">
-                            <p className="text-red-400 text-sm font-bold uppercase tracking-tighter">修行不足！正確真意為：</p>
-                            <p className="text-4xl text-white font-black tracking-widest">{word}</p>
-                        </div>
-                    )}
-
-                    <button 
-                        onClick={handleSubmit}
-                        className="w-full py-4 btn-gold text-xl"
-                        disabled={showAnswer}
-                    >
-                        確認真意 (送出)
-                    </button>
                 </div>
             );
         };
 
         // ==========================================
-        // 8. 試煉視圖 (TrialView)
+        // 子組件: 試煉與時光屋
         // ==========================================
-        const TrialView = ({ user, words, settings, setView, onUpdate }) => {
-            const [r, setR] = useState(1);
-            const [idx, setIdx] = useState(0);
-            const [qList, setQList] = useState([]);
-            const [errs, setErrs] = useState([]);
-            const [isRes, setIsRes] = useState(false);
+        const Trial = ({ user, settings, words, setView, onUpdate }) => {
+            const [r, setR] = useState(1); const [idx, setIdx] = useState(0); 
+            const [q, setQ] = useState([]); const [errs, setErrs] = useState([]); const [res, setRes] = useState(false);
 
             useEffect(() => {
-                if (words.length < 5) { alert("仙冊不足！"); setView('dash'); return; }
+                if (words.length < 5) { alert("仙冊不足！"); setView('lobby'); return; }
+                if (user.stats.rounds >= settings.rounds) { alert("今日修為已滿"); setView('lobby'); return; }
                 init();
             }, []);
 
             const init = () => {
-                const picked = [...words].sort(() => 0.5 - Math.random()).slice(0, settings.qPerRound);
-                setQList(picked); setIdx(0); setErrs([]); setIsRes(false);
+                const picked = [...words].sort(() => 0.5 - Math.random()).slice(0, settings.questions);
+                setQ(picked); setIdx(0); setErrs([]); setRes(false);
             };
 
-            const handleResult = (ok) => {
-                if (!ok) setErrs(p => [...p, qList[idx]]);
-                else user.exp += 25;
-
-                if (idx + 1 < qList.length) setIdx(idx + 1);
-                else handleEnd(ok);
+            const next = (ok) => {
+                if(!ok) setErrs(p => [...p, q[idx]]); else user.exp += 30;
+                if(idx + 1 < q.length) setIdx(idx + 1);
+                else {
+                    const finalErrs = !ok ? [...errs, q[idx]] : errs;
+                    if(finalErrs.length === 0) {
+                        if(r < settings.rounds) { alert("此輪圓滿！進入下一輪"); setR(r+1); init(); }
+                        else { done(true); }
+                    } else if(finalErrs.length <= settings.errors && !res) {
+                        alert(`進入敗部復活試煉！`); setRes(true); setQ([...finalErrs]); setErrs([]); setIdx(0);
+                    } else { alert("道心受損，試煉終止！"); done(false); }
+                }
             };
 
-            const handleEnd = (lastOk) => {
-                const finalErrs = !lastOk ? [...errs, qList[idx]] : errs;
-                if (finalErrs.length === 0) {
-                    if (r < settings.maxRounds) { alert("此輪圓滿！進入下一輪"); setR(r+1); init(); }
-                    else { finish(true); }
-                } else if (finalErrs.length <= settings.maxErr && !isRes) {
-                    alert("道心受損！開啟重生試煉");
-                    setIsRes(true); setQList([...finalErrs]); setErrs([]); setIdx(0);
-                } else { alert("試煉失敗！今日挑戰機會已竭。"); finish(false); }
-            };
+            const done = (ok) => { user.stats.rounds++; onUpdate(user); if(ok) confetti(); setView('lobby'); };
 
-            const finish = (ok) => { user.stats.rounds += 1; onUpdate(user); if(ok) confetti(); setView('dash'); };
-
-            if (!qList[idx]) return null;
-
+            if (!q[idx]) return null;
             return (
-                <div className="p-6 h-screen flex flex-col">
-                    <header className="flex justify-between items-center mt-12 mb-6">
-                        <span className="text-xs text-slate-500 font-black uppercase">輪 {r} - 進度 {idx+1}/{qList.length}</span>
-                        {isRes && <span className="bg-red-600 px-3 py-1 rounded-full text-[10px] font-black animate-pulse">重生中</span>}
+                <div className="p-6 h-screen flex flex-col animate-in fade-in duration-500">
+                    <header className="flex justify-between items-center mt-12 mb-4">
+                        <span className="text-xs text-slate-500 font-black">輪次 {r} - 進度 {idx+1}/{q.length}</span>
+                        {res && <span className="bg-red-600 px-3 py-1 rounded-full text-[10px] font-black animate-pulse">重生中</span>}
                     </header>
-                    <div className="text-center mb-8">
-                        <p className="text-slate-500 text-sm uppercase font-black tracking-widest">{qList[idx].cat}</p>
-                        <h2 className="text-6xl font-bold gold-text tracking-tighter">{qList[idx].zh}</h2>
-                    </div>
-                    <SpellingEngine word={qList[idx].en} onResult={handleResult} onExit={() => { onUpdate(user); setView('dash'); }} />
+                    <Engine word={q[idx].en} zh={q[idx].zh} onResult={next} onBack={() => { onUpdate(user); setView('lobby'); }} />
                 </div>
             );
         };
 
-        // ==========================================
-        // 9. 時光屋視圖 (TrainingView)
-        // ==========================================
-        const TrainingView = ({ user, words, setView, onUpdate }) => {
+        const Training = ({ user, words, setView, onUpdate }) => {
             const [cur, setCur] = useState(null);
-            useEffect(() => { if (words.length > 0) next(); }, []);
-            const next = () => setCur(words[Math.floor(Math.random()*words.length)]);
-            const handleResult = (ok) => { if(ok) user.stats.spirit += 1; next(); };
-
+            useEffect(() => { if(words.length) next(); }, []);
+            const next = () => setCur(words[Math.floor(Math.random() * words.length)]);
             if (!cur) return null;
             return (
                 <div className="p-6 h-screen flex flex-col">
-                    <header className="flex justify-between items-center mt-12 mb-6">
-                        <span className="text-blue-400 font-black tracking-widest uppercase">天逆空間 - 練習數: {user.stats.spirit}</span>
-                    </header>
-                    <div className="text-center mb-8">
-                        <p className="text-slate-500 text-sm font-black tracking-widest">{cur.cat}</p>
-                        <h2 className="text-6xl font-bold text-white tracking-tighter">{cur.zh}</h2>
-                    </div>
-                    <SpellingEngine word={cur.en} onResult={handleResult} onExit={() => { onUpdate(user); setView('dash'); }} />
+                    <header className="flex justify-between items-center mt-12 mb-4"><span className="text-blue-400 font-black text-xs uppercase tracking-widest tracking-widest">空間累積: {user.stats.spirit}</span></header>
+                    <Engine word={cur.en} zh={cur.zh} onResult={(ok)=>{ if(ok) user.stats.spirit++; next(); }} onBack={()=>{ onUpdate(user); setView('lobby'); }} />
                 </div>
             );
         };
 
         // ==========================================
-        // 10. 管理視圖 (AdminView)
+        // 子組件: 仙界主宰 (Admin)
         // ==========================================
-        const AdminView = ({ settings, setSettings, words, setWords, batches, setBatches, users, setUsers, setView }) => {
-            const [isAuth, setIsAuth] = useState(false);
-            const [pw, setPw] = useState("");
-
-            const handleCSV = (e) => {
-                const f = e.target.files[0];
-                if (!f) return;
-                const r = new FileReader();
-                r.onload = (ev) => {
-                    const lines = ev.target.result.split('\n').filter(l => l.trim());
-                    const bid = Date.now();
-                    const news = lines.map(line => {
-                        const p = line.split(',');
-                        if (p.length < 3) return null;
-                        const en = p[0].trim();
-                        const zh = p[2].trim();
-                        return { en, pos: p[1].trim(), zh, cat: guessCategory(zh), bid };
-                    }).filter(x => x);
-
-                    const final = [...words];
-                    news.forEach(n => {
-                        const idx = final.findIndex(w => w.en.toLowerCase() === n.en.toLowerCase());
-                        if (idx !== -1) { if (!final[idx].zh.includes(n.zh)) final[idx].zh += `; ${n.zh}`; }
-                        else { final.push(n); }
+        const Admin = ({ settings, setSettings, words, setWords, batches, setBatches, users, setUsers, setView }) => {
+            const [auth, setAuth] = useState(false); const [pw, setPw] = useState("");
+            
+            const hCSV = (e) => {
+                const f = e.target.files[0]; if(!f) return;
+                const r = new FileReader(); r.onload = (ev) => {
+                    const lines = ev.target.result.split('\n').filter(l => l.trim()); const bid = Date.now();
+                    const news = lines.map(l => { const p = l.split(','); return p.length < 3 ? null : { en: p[0].trim(), zh: p[2].trim(), bid }; }).filter(x=>x);
+                    const nw = [...words]; news.forEach(n => {
+                        const i = nw.findIndex(w => w.en.toLowerCase() === n.en.toLowerCase());
+                        if (i !== -1) { if(!nw[i].zh.includes(n.zh)) nw[i].zh += `; ${n.zh}`; } else nw.push(n);
                     });
-
-                    setWords(final); localStorage.setItem('sn_words', JSON.stringify(final));
-                    const newB = [...batches, { id: bid, date: new Date().toLocaleString(), count: news.length }];
-                    setBatches(newB); localStorage.setItem('sn_batches', JSON.stringify(newB));
-                    alert(`匯入 ${news.length} 題成功！`);
-                };
-                r.readAsText(f);
+                    setWords(nw); setBatches([...batches, { id: bid, d: new Date().toLocaleString(), c: news.length }]); alert("成功！");
+                }; r.readAsText(f);
             };
 
-            const guessCategory = (zh) => {
-                const dictionary = {
-                    "動作": ["跑", "跳", "走", "看", "說", "打", "取", "修", "聽", "讀", "寫"],
-                    "情緒": ["怒", "喜", "憂", "傷", "愛", "恨", "驚", "恐", "悲"],
-                    "天氣": ["風", "雨", "雷", "電", "雲", "雪", "晴", "氣"],
-                    "物品": ["桌", "椅", "筆", "劍", "器", "具", "服", "物"]
-                };
-                for (let cat in dictionary) { if (dictionary[cat].some(k => zh.includes(k))) return cat; }
-                return "其他";
-            };
-
-            if (!isAuth) return (
-                <div className="p-8 flex flex-col items-center justify-center min-h-screen space-y-6">
-                    <h2 className="text-2xl font-bold gold-text uppercase">主宰禁制</h2>
-                    <input type="password" placeholder="密碼" className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl text-center text-white" value={pw} onChange={e => setPw(e.target.value)} onKeyUp={e => e.key === 'Enter' && (pw === settings.adminPw ? setIsAuth(true) : alert("錯"))} />
-                    <button onClick={() => pw === settings.adminPw ? setIsAuth(true) : alert("錯")} className="w-full py-4 btn-gold">解禁</button>
-                    <button onClick={() => setView('dash')} className="text-slate-500">返回</button>
+            if (!auth) return (
+                <div className="p-8 flex flex-col items-center justify-center min-h-screen space-y-8 animate-in zoom-in">
+                    <h2 className="text-4xl font-bold gold-text uppercase">主宰禁制</h2>
+                    <input type="password" placeholder="輸入密碼" className="w-full bg-slate-900 border border-white/5 p-6 rounded-2xl text-center text-3xl outline-none focus:border-yellow-500" value={pw} onChange={e=>setPw(e.target.value)} onKeyUp={e=>e.key==='Enter' && (pw===settings.adminPw ? setAuth(true) : alert("錯"))} />
+                    <button onClick={()=>pw===settings.adminPw ? setAuth(true) : alert("錯")} className="w-full py-5 btn-gold text-xl">破解禁制</button>
+                    <button onClick={()=>setView('lobby')} className="text-slate-600 font-black uppercase tracking-widest">返回洞府</button>
                 </div>
             );
 
             return (
-                <div className="p-6 flex flex-col space-y-8 overflow-y-auto h-screen pb-20">
-                    <header className="flex justify-between items-center mt-4"><h2 className="text-2xl font-bold gold-text">主宰後台</h2><button onClick={()=>setView('dash')}><i data-lucide="x"></i></button></header>
-                    <section className="glass p-6 rounded-3xl space-y-4">
-                        <h3 className="text-xs font-bold text-emerald-500 uppercase border-b border-white/5 pb-2">CSV 匯入</h3>
-                        <input type="file" id="csv" hidden accept=".csv" onChange={handleCSV} />
-                        <label htmlFor="csv" className="w-full py-4 bg-emerald-600 rounded-xl flex items-center justify-center space-x-2 cursor-pointer text-black font-black uppercase"><i data-lucide="file-up"></i><span>選取 CSV 檔案</span></label>
+                <div className="p-6 flex flex-col space-y-8 overflow-y-auto h-screen pb-24">
+                    <header className="flex justify-between items-center mt-4"><h2 className="text-2xl font-black gold-text">仙界主宰</h2><button onClick={()=>setView('lobby')} className="p-2 glass rounded-full"><i data-lucide="x"></i></button></header>
+                    <section className="glass p-6 rounded-3xl space-y-5">
+                        <h3 className="text-xs font-black text-emerald-500 border-b border-white/5 pb-2 uppercase tracking-widest">CSV 匯入</h3>
+                        <input type="file" id="c" hidden accept=".csv" onChange={hCSV} />
+                        <label htmlFor="c" className="w-full py-5 bg-emerald-600 rounded-2xl flex items-center justify-center space-x-3 cursor-pointer text-black font-black uppercase"><i data-lucide="file-up"></i><span>選取經書匯入</span></label>
                     </section>
                     <section className="glass p-6 rounded-3xl space-y-4">
-                        <h3 className="text-xs font-black text-blue-400 border-b border-white/5 pb-2 uppercase tracking-widest">修士管理</h3>
-                        {users.map((u, i) => (
-                            <div key={i} className="flex justify-between items-center text-xs">
-                                <span>{u.name} (Exp: {u.exp})</span>
-                                <div className="space-x-2">
-                                    <button onClick={() => { const np = prompt("新密碼"); if(np) u.pw = np; setUsers([...users]); localStorage.setItem('sn_users', JSON.stringify(users)); }} className="text-blue-400 font-bold uppercase">密碼</button>
-                                    <button onClick={() => setUsers(users.filter(x => x.name !== u.name))} className="text-red-500 font-bold uppercase">逐出</button>
-                                </div>
-                            </div>
-                        ))}
+                        <h3 className="text-xs font-black text-blue-400 border-b border-white/5 pb-2 uppercase tracking-widest">批次管理</h3>
+                        {batches.map(b=><div key={b.id} className="flex justify-between items-center text-[10px] bg-slate-900/50 p-4 rounded-xl border border-white/5"><div className="space-y-1"><p>{b.d}</p><p className="text-slate-500">數量: {b.c}</p></div><button onClick={()=>{setWords(words.filter(w=>w.bid!==b.id)); setBatches(batches.filter(x=>x.id!==b.id));}} className="text-red-500 border border-red-500/20 px-3 py-1 rounded-lg font-black uppercase">焚毀</button></div>)}
+                    </section>
+                    <section className="glass p-6 rounded-3xl space-y-5">
+                        <h3 className="text-xs font-black text-yellow-500 border-b border-white/5 pb-2 uppercase tracking-widest">法則設定</h3>
+                        <div className="space-y-5 text-xs font-bold">
+                            <div className="flex justify-between items-center"><span>每日挑戰輪次</span><input type="number" className="w-16 bg-slate-900 border border-white/5 p-2 rounded text-center" value={settings.rounds} onChange={e=>setSettings({...settings, rounds:parseInt(e.target.value)})} /></div>
+                            <div className="flex justify-between items-center"><span>每輪試煉題數</span><input type="number" className="w-16 bg-slate-900 border border-white/5 p-2 rounded text-center" value={settings.questions} onChange={e=>setSettings({...settings, questions:parseInt(e.target.value)})} /></div>
+                            <div className="flex justify-between items-center"><span>復活容錯題數</span><input type="number" className="w-16 bg-slate-900 border border-white/5 p-2 rounded text-center" value={settings.errors} onChange={e=>setSettings({...settings, errors:parseInt(e.target.value)})} /></div>
+                            <div className="flex justify-between items-center"><span>主宰密碼修改</span><input type="text" className="w-24 bg-slate-900 border border-white/5 p-2 rounded text-center" value={settings.adminPw} onChange={e=>setSettings({...settings, adminPw:e.target.value})} /></div>
+                        </div>
+                    </section>
+                    <section className="glass p-6 rounded-3xl space-y-5">
+                        <h3 className="text-xs font-black text-purple-400 border-b border-white/5 pb-2 uppercase tracking-widest">修士名錄</h3>
+                        {users.map((u,i)=><div key={i} className="flex justify-between items-center text-xs font-bold"><span>{u.name} (Exp:{u.exp})</span><div className="space-x-2"><button onClick={()=>{const n=prompt("新密語"); if(n){u.pw=n; setUsers([...users]);}}} className="text-blue-400 px-2 py-1 border border-blue-400/20 rounded">密碼</button><button onClick={()=>{if(confirm("逐出？")){const nl=users.filter(x=>x.name!==u.name); setUsers(nl);}}} className="text-red-500 px-2 py-1 border border-red-500/20 rounded">逐出</button></div></div>)}
                     </section>
                 </div>
             );
