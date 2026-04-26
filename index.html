@@ -145,8 +145,29 @@ const autoCategorize = (zh) => {
 
             // 初始同步
            // 初始同步：滅鬼邏輯 (從第147行開始替換)
-            useEffect(() => {
+           useEffect(() => {
                 const load = (k, d) => JSON.parse(localStorage.getItem(k) || d);
+                
+                // 1. 單字和設定可以先讀本地 (因為它們不常刪除)
+                setWords(load('sn_w', '[]'));
+                setBatches(load('sn_b', '[]'));
+                const s = load('sn_s', 'null');
+                if (s) setSettings(s);
+
+                // 2. 修士名單：如果有雲端，就「禁止」讀取本地，防止殘魂干擾
+                if (db) {
+                    const unsubscribe = db.collection("users").onSnapshot(snapshot => {
+                        const cloudUsers = snapshot.docs.map(doc => doc.data());
+                        // 雲端是唯一真理，直接覆蓋
+                        setUsers(cloudUsers);
+                        localStorage.setItem('sn_u', JSON.stringify(cloudUsers));
+                    });
+                    return () => unsubscribe();
+                } else {
+                    // 沒網路時才准讀本地
+                    setUsers(load('sn_u', '[]'));
+                }
+            }, []);
                 
                 // A. 載入單字庫與設定 (這些通常不常變動)
                 setWords(load('sn_w', '[]'));
@@ -175,10 +196,20 @@ const autoCategorize = (zh) => {
             }, []);
 
             const persist = (u, w, b, s) => {
-                if (u) { setUsers(u); localStorage.setItem('sn_u', JSON.stringify(u)); if(db) u.forEach(x => db.collection("users").doc(x.name).set(x)); }
+                // 這裡只存本地，絕對不准自動推整份名單上雲端！
+                if (u) { setUsers(u); localStorage.setItem('sn_u', JSON.stringify(u)); }
                 if (w) { setWords(w); localStorage.setItem('sn_w', JSON.stringify(w)); }
                 if (b) { setBatches(b); localStorage.setItem('sn_b', JSON.stringify(b)); }
                 if (s) { setSettings(s); localStorage.setItem('sn_s', JSON.stringify(s)); }
+                
+                // 雲端同步僅限於「全域配置」，不包含修士名單
+                if (db && (w || b || s)) {
+                    db.collection("global").doc("config").set({ 
+                        words: w || words, 
+                        batches: b || batches, 
+                        settings: s || settings 
+                    }, { merge: true });
+                }
             };
 
             const onUserUpdate = (updated) => {
