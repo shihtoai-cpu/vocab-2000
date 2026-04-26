@@ -376,7 +376,24 @@ const autoCategorize = (zh) => {
             const [startTime] = useState(Date.now());
             const [flipTime, setFlipTime] = useState(0);
             const [grade, setGrade] = useState(null); // { label: 'A', color: 'text-green-400', pts: 20 }
+// 當題目變換時，洗滌神識狀態 (解決卡死問題)
+            useEffect(() => {
+                setIsFlipped(false);
+                setGrade(null);
+                setFlipTime(0);
+            }, [word]);
 
+            // 定義進入下一題的法門
+            const handleNext = () => {
+                if (!grade) return;
+                onResult(grade.pts > 0, grade.pts, flipTime);
+            };
+            // 當單字變更時，強制洗滌狀態，防止卡在評分畫面
+            useEffect(() => {
+                setIsFlipped(false);
+                setGrade(null);
+                setFlipTime(0);
+            }, [word]);
             const handleFlip = () => {
                 if (isFlipped) return;
                 setFlipTime((Date.now() - startTime) / 1000);
@@ -384,6 +401,7 @@ const autoCategorize = (zh) => {
             };
 
             const evaluate = (isCorrect) => {
+                if (grade) return; // 防止重複點擊
                 let res = { label: 'C', color: 'text-red-500', pts: -5 };
                 if (isCorrect) {
                     if (flipTime < 1.5) res = { label: 'SSS', color: 'text-red-600 font-black animate-pulse', pts: 50 };
@@ -392,22 +410,33 @@ const autoCategorize = (zh) => {
                     else res = { label: 'B', color: 'text-slate-400', pts: 10 };
                 }
                 setGrade(res);
-                // 延遲一段時間讓修士看清楚評價，再回傳結果
-                setTimeout(() => {
-                    onResult(isCorrect, res.pts, flipTime); // 回傳是否正確、積分、反應時間
-                }, 1200);
             };
 
+            // 點擊評分畫面後，才真正回傳結果並進入下一題
+            const handleNext = () => {
+                if (!grade) return;
+                onResult(grade.pts > 0, grade.pts, flipTime);
+            };
             return (
                 <div className="flex-1 flex flex-col items-center justify-center space-y-10 w-full p-4">
                     <button onClick={onBack} className="btn-exit fixed top-8 left-8">儲存進度並遁走</button>
                     
                     {/* 評價顯現層 */}
-                    {grade ? (
-                        <div className="text-center animate-in zoom-in duration-300">
-                            <h2 className={`text-9xl font-black mb-4 ${grade.color}`}>{grade.label} 級</h2>
-                            <p className="text-slate-400 text-lg uppercase tracking-widest">{grade.pts > 0 ? `修為 +${grade.pts} PT` : `受挫 ${grade.pts} PT`}</p>
-                            <p className="text-slate-600 text-xs mt-2">(點擊螢幕進入下一題)</p>
+{grade ? (
+                        <div className="text-center animate-in zoom-in duration-300 w-full flex flex-col items-center justify-center space-y-8">
+                            <h2 className={`text-9xl font-black ${grade.color}`}>{grade.label} 級</h2>
+                            <p className="text-slate-400 text-lg uppercase tracking-widest">
+                                {grade.pts > 0 ? `修為 +${grade.pts} PT` : `受挫 ${grade.pts} PT`}
+                            </p>
+                            
+                            {/* 改為明確的「下一題」按鈕，防止誤觸 */}
+                            <button 
+                                onClick={handleNext}
+                                className="btn-gold px-12 py-4 text-xl shadow-[0_0_20px_rgba(250,204,21,0.4)] flex items-center space-x-2"
+                            >
+                                <span>感悟下一題</span>
+                                <i data-lucide="chevron-right"></i>
+                            </button>
                         </div>
                     ) : (
                         <div className="w-full max-w-sm space-y-8">
