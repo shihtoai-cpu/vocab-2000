@@ -57,6 +57,19 @@
         
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        /* 底部導航專用樣式 */
+        .nav-active { color: var(--gold); filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.6)); transform: translateY(-4px); }
+        .nav-item { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        /* 萬寶閣精熟特效 */
+        .mastered-glow { box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4) !important; }
+        
+        /* 手寫格線動畫 */
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .error-shake { animation: shake 0.2s ease-in-out 0s 2; border-bottom-color: #ef4444 !important; }
+
+        /* 封神碑排名特效 */
+        .rank-1 { background: linear-gradient(135deg, rgba(250, 204, 21, 0.2) 0%, transparent 100%); border: 1px solid var(--gold) !important; }
     </style>
 </head>
 <body>
@@ -142,8 +155,110 @@ const autoCategorize = (zh) => {
         // ==========================================
         // 核心邏輯模組
         // ==========================================
+        // --- 1. 萬寶閣 (兵器庫) ---
+        const Treasury = ({ words, user }) => (
+            <div className="p-6 space-y-6 overflow-y-auto pb-32 animate-in fade-in">
+                <div className="flex justify-between items-end">
+                    <div>
+                        <h2 className="text-3xl font-bold gold-text">萬寶閣</h2>
+                        <p className="text-[10px] text-slate-500 tracking-[0.3em]">目前收納經文：{words.length} 卷</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                    {words.map((w, i) => {
+                        // 假設每對一次得 10 分，超過 50 分視為精熟 (可根據你的數據邏輯調整)
+                        const isMastered = (user.wordStats?.[w.en] || 0) >= 50; 
+                        return (
+                            <div key={i} className={`glass p-4 rounded-2xl relative overflow-hidden border border-white/5 ${isMastered ? 'mastered-glow' : ''}`}>
+                                {isMastered && <div className="absolute top-0 right-0 bg-emerald-500 text-black text-[8px] px-2 py-0.5 font-black rounded-bl-lg">已精熟</div>}
+                                <h4 className="font-black text-slate-200">{w.en}</h4>
+                                <p className="text-[10px] text-slate-500 truncate">{w.pos} {w.zh}</p>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+
+        // --- 2. 封神碑 (大廳排行) ---
+        const HallOfFame = ({ users }) => {
+            const sorted = [...users].sort((a, b) => b.exp - a.exp);
+            return (
+                <div className="p-6 space-y-6 overflow-y-auto pb-32 animate-in slide-in-from-right">
+                    <div className="text-center py-4">
+                        <h2 className="text-3xl font-calligraphy gold-text">封神碑</h2>
+                        <p className="text-[10px] text-slate-500 tracking-widest uppercase">諸天萬界・唯我獨尊</p>
+                    </div>
+                    <div className="relative border-l-2 border-slate-800 ml-4 space-y-8 py-4">
+                        {sorted.map((u, i) => {
+                            const info = getRealmInfo(u.exp);
+                            return (
+                                <div key={i} className={`relative flex items-center ml-6 glass p-4 rounded-2xl border border-white/5 ${i === 0 ? 'rank-1 shadow-[0_0_30px_rgba(250,204,21,0.15)]' : ''}`}>
+                                    <div className={`absolute -left-10 w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${i === 0 ? 'bg-yellow-500 text-black shadow-[0_0_15px_#facc15]' : 'bg-slate-800 text-slate-400'}`}>
+                                        {i + 1}
+                                    </div>
+                                    <img src={u.avatar} className="w-10 h-10 rounded-full border-2 border-slate-700 mr-4 object-cover" />
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-start">
+                                            <span className="font-bold text-slate-200">{u.name}</span>
+                                            <span className="text-[10px] text-yellow-500 font-mono">{u.exp} PT</span>
+                                        </div>
+                                        <p className={`text-[10px] font-black uppercase ${info.c}`}>{info.m} · {info.s}</p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 3. 神識刻印 (手寫訓練核心) ---
+        const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
+            const [input, setInput] = useState("");
+            const [isError, setIsError] = useState(false);
+
+            useEffect(() => {
+                const handleKey = (e) => {
+                    if (e.key === "Backspace") { setInput(s => s.slice(0, -1)); setIsError(false); }
+                    else if (e.key === "Enter" && input.length > 0) {
+                        if (input.toLowerCase() === word.toLowerCase()) { onResult(true, 500); }
+                        else { setIsError(true); setTimeout(() => setIsError(false), 500); }
+                    }
+                    else if (e.key.length === 1 && /[a-zA-Z ]/.test(e.key)) {
+                        if (input.length < word.length) setInput(s => s + e.key);
+                    }
+                };
+                window.addEventListener("keydown", handleKey);
+                return () => window.removeEventListener("keydown", handleKey);
+            }, [input, word]);
+
+            return (
+                <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-12">
+                    <div className="text-center space-y-2">
+                        <p className="text-slate-500 text-[10px] tracking-[0.5em] uppercase">神識刻印</p>
+                        <h2 className="text-5xl font-bold text-white">{zh}</h2>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-y-10 max-w-full">
+                        {word.split("").map((char, i) => (
+                            char === " " 
+                            ? <div key={i} className="w-12" /> // 空格加寬區隔
+                            : <div key={i} className="flex flex-col items-center mx-1">
+                                <span className="text-4xl font-black text-yellow-500 h-10 font-mono">
+                                    {input[i] || ""}
+                                </span>
+                                <div className={`h-1 w-8 mt-2 transition-all duration-300 ${isError ? 'bg-red-500 error-shake' : (input[i] ? 'bg-yellow-500 shadow-[0_0_10px_#facc15]' : 'bg-slate-800')}`} />
+                              </div>
+                        ))}
+                    </div>
+                    <div className="text-slate-600 text-[10px] uppercase tracking-widest animate-pulse">請直接敲擊鍵盤輸入，Enter 提交感悟</div>
+                    <button onClick={onBack} className="btn-exit">中斷刻印</button>
+                </div>
+            );
+        };
         const App = () => {
-            const [view, setView] = useState('gate'); 
+            const [view, setView] = useState('gate');
+            const [tab, setTab] = useState('home');
             const [users, setUsers] = useState([]);
             const [user, setUser] = useState(null);
             const [words, setWords] = useState([]);
@@ -206,7 +321,32 @@ const autoCategorize = (zh) => {
                     <div className="relative z-10 w-full max-w-md min-h-screen flex flex-col">
                         {view === 'gate' && <Gate users={users} setView={setView} setUser={setUser} />}
                         {view === 'reg' && <Register onBack={()=>setView('gate')} onDone={(u)=>{ persist([...users, u]); setView('gate'); }} />}
-                        {view === 'lobby' && <Lobby user={user} settings={settings} setView={setView} onLogout={()=>setView('gate')} onUpdate={onUserUpdate} />}
+                        {view === 'lobby' && (
+        <div className="flex-1 flex flex-col h-screen">
+            {/* 內容區塊 */}
+            <div className="flex-1 overflow-hidden">
+                {tab === 'home' && <Lobby user={user} settings={settings} setView={setView} onLogout={()=>setView('gate')} onUpdate={onUserUpdate} />}
+                {tab === 'hall' && <HallOfFame users={users} />}
+                {tab === 'store' && <Treasury words={words} user={user} />}
+            </div>
+
+            {/* 底部導航欄 */}
+            <nav className="fixed bottom-0 left-0 right-0 h-20 glass border-t border-white/5 flex justify-around items-center px-4 z-50">
+                <button onClick={() => setTab('home')} className={`nav-item flex flex-col items-center space-y-1 ${tab === 'home' ? 'nav-active' : 'text-slate-500'}`}>
+                    <i data-lucide="home" className="w-5 h-5"></i>
+                    <span className="text-[10px] font-bold">洞府</span>
+                </button>
+                <button onClick={() => setTab('hall')} className={`nav-item flex flex-col items-center space-y-1 ${tab === 'hall' ? 'nav-active' : 'text-slate-500'}`}>
+                    <i data-lucide="trophy" className="w-5 h-5"></i>
+                    <span className="text-[10px] font-bold">封神碑</span>
+                </button>
+                <button onClick={() => setTab('store')} className={`nav-item flex flex-col items-center space-y-1 ${tab === 'store' ? 'nav-active' : 'text-slate-500'}`}>
+                    <i data-lucide="swords" className="w-5 h-5"></i>
+                    <span className="text-[10px] font-bold">萬寶閣</span>
+                </button>
+            </nav>
+        </div>
+    )}
                         {view === 'trial' && <Trial user={user} settings={settings} words={words} onUpdate={onUserUpdate} setView={setView} />}
                         {view === 'train' && <Training user={user} words={words} onUpdate={onUserUpdate} setView={setView} />}
                         {view === 'admin' && <Admin settings={settings} setSettings={(s)=>persist(null,null,null,s)} words={words} setWords={(w)=>persist(null,w,null,null)} batches={batches} setBatches={(b)=>persist(null,null,b,null)} users={users} setUsers={(u)=>persist(u)} setView={setView} curUser={user} setCurUser={setUser} />}
