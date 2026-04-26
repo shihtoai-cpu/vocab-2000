@@ -429,11 +429,10 @@ const autoCategorize = (zh) => {
         // ==========================================
         // 子組件: 仙界主宰 (Admin)
         // ==========================================
-        const Admin = ({ settings, setSettings, words, setWords, batches, setBatches, users, setUsers, setView }) => {
+ const Admin = ({ settings, setSettings, words, setWords, batches, setBatches, users, setUsers, setView }) => {
     const [auth, setAuth] = useState(false);
     const [pw, setPw] = useState("");
 
-    // 內部 CSV 處理函數
     const handleCSV = (e) => {
         const f = e.target.files[0];
         if (!f) return;
@@ -449,7 +448,6 @@ const autoCategorize = (zh) => {
                 const zh = p[2].trim();
                 return { en, pos, zh, cat: autoCategorize(zh), bid };
             }).filter(x => x);
-
             const nw = [...words];
             news.forEach(n => {
                 const i = nw.findIndex(w => w.en.toLowerCase() === n.en.toLowerCase());
@@ -458,15 +456,31 @@ const autoCategorize = (zh) => {
             setWords(nw); localStorage.setItem('sn_w', JSON.stringify(nw));
             setBatches([...batches, { id: bid, d: new Date().toLocaleString(), c: news.length }]);
             localStorage.setItem('sn_b', JSON.stringify([...batches, { id: bid, d: new Date().toLocaleString(), c: news.length }]));
-            alert("匯入真意成功！");
+            alert("經書匯入成功！");
         };
         r.readAsText(f);
+    };
+
+    // 處理修士頭像變更
+    const handleAvatarChange = (index, e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const newUsers = [...users];
+                newUsers[index].avatar = ev.target.result;
+                setUsers(newUsers);
+                localStorage.setItem('sn_u', JSON.stringify(newUsers));
+                alert("修士顯像已重塑！");
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     if (!auth) return (
         <div className="p-8 flex flex-col items-center justify-center min-h-screen space-y-6 animate-in zoom-in">
             <h2 className="text-2xl font-bold gold-text uppercase">主宰禁制</h2>
-            <input type="password" placeholder="密碼" className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl text-center" value={pw} onChange={e=>setPw(e.target.value)} onKeyUp={e=>e.key==='Enter'&&(pw===settings.adminPw?setAuth(true):alert("錯"))} />
+            <input type="password" placeholder="輸入主宰密碼" className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl text-center" value={pw} onChange={e=>setPw(e.target.value)} onKeyUp={e=>e.key==='Enter'&&(pw===settings.adminPw?setAuth(true):alert("錯"))} />
             <button onClick={() => pw === settings.adminPw ? setAuth(true) : alert("錯")} className="w-full py-4 btn-gold">解禁</button>
             <button onClick={() => setView('lobby')} className="text-slate-500 text-xs">返回</button>
         </div>
@@ -474,61 +488,66 @@ const autoCategorize = (zh) => {
 
     return (
         <div className="p-6 flex flex-col space-y-8 overflow-y-auto h-screen pb-24">
-            <div className="flex justify-between items-center mt-4"><h2 className="text-xl font-bold gold-text">仙界主宰殿</h2><button onClick={()=>setView('lobby')}><i data-lucide="x"></i></button></div>
+            <div className="flex justify-between items-center mt-4">
+                <h2 className="text-xl font-bold gold-text">仙界主宰殿</h2>
+                <button onClick={()=>setView('lobby')} className="p-2 glass rounded-full"><i data-lucide="x"></i></button>
+            </div>
             
-            {/* 法則設定 */}
+            {/* 1. 法則設定 */}
             <section className="glass p-6 rounded-2xl space-y-4">
                 <h3 className="text-xs font-black text-yellow-500 border-b border-white/5 pb-2 uppercase tracking-widest">天道法則設定</h3>
-                <div className="space-y-5 text-[10px]">
-                    <div className="space-y-1">
-                        <div className="flex justify-between"><span>每日試煉輪次 ({settings.rounds})</span><span>3-10</span></div>
-                        <input type="range" min="3" max="10" value={settings.rounds} onChange={e=>setSettings({...settings, rounds:parseInt(e.target.value)})} className="w-full accent-yellow-500" />
-                    </div>
-                    <div className="space-y-1">
-                        <div className="flex justify-between"><span>每輪單字數量 ({settings.questions})</span><span>10-20</span></div>
-                        <input type="range" min="10" max="20" value={settings.questions} onChange={e=>setSettings({...settings, questions:parseInt(e.target.value)})} className="w-full accent-yellow-500" />
-                    </div>
-                    <div className="space-y-1">
-                        <div className="flex justify-between"><span>復活容錯題數 ({settings.errors})</span><span>0-50</span></div>
-                        <input type="range" min="0" max="50" value={settings.errors} onChange={e=>setSettings({...settings, errors:parseInt(e.target.value)})} className="w-full accent-yellow-500" />
-                    </div>
-                    <div className="pt-2">
-                        <span>主宰管理密碼修改：</span>
-                        <input type="text" className="w-full bg-slate-900 border border-white/10 rounded mt-1 p-2 text-center text-yellow-500" value={settings.adminPw} onChange={e=>setSettings({...settings, adminPw:e.target.value})} />
+                <div className="space-y-4 text-[10px]">
+                    <div className="flex justify-between items-center"><span>挑戰輪次: {settings.rounds}</span><input type="range" min="3" max="10" value={settings.rounds} onChange={e=>setSettings({...settings, rounds:parseInt(e.target.value)})} className="w-24 accent-yellow-500" /></div>
+                    <div className="flex justify-between items-center"><span>每輪題數: {settings.questions}</span><input type="range" min="10" max="20" value={settings.questions} onChange={e=>setSettings({...settings, questions:parseInt(e.target.value)})} className="w-24 accent-yellow-500" /></div>
+                    <div className="flex justify-between items-center"><span>復活容錯: {settings.errors}</span><input type="range" min="0" max="50" value={settings.errors} onChange={e=>setSettings({...settings, errors:parseInt(e.target.value)})} className="w-24 accent-yellow-500" /></div>
+                    <div className="pt-2 border-t border-white/5">
+                        <span className="text-slate-500">主宰密碼修改：</span>
+                        <input type="text" className="w-full bg-slate-900 border border-white/10 rounded mt-1 p-2 text-center text-yellow-500 font-bold" value={settings.adminPw} onChange={e=>setSettings({...settings, adminPw:e.target.value})} />
                     </div>
                 </div>
             </section>
 
-            {/* 經書管理 */}
-            <section className="glass p-6 rounded-2xl space-y-4">
-                <h3 className="text-xs font-black text-emerald-500 border-b border-white/5 pb-2 uppercase tracking-widest">萬卷經書管理</h3>
-                <input type="file" accept=".csv" onChange={handleCSV} className="text-[10px] w-full" />
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {batches.map(b=><div key={b.id} className="flex justify-between items-center text-[10px] bg-slate-900/50 p-2 rounded">
-                        <span>{b.d} ({b.c}題)</span>
-                        <button onClick={()=>{if(confirm("焚毀此批？")){
-                            setWords(words.filter(w=>w.bid!==b.id)); 
-                            setBatches(batches.filter(x=>x.id!==b.id));
-                        }}} className="text-red-500 font-bold">焚</button>
-                    </div>)}
-                </div>
-            </section>
-
-            {/* 修士管理 */}
+            {/* 2. 修士名錄維護 */}
             <section className="glass p-6 rounded-2xl space-y-4">
                 <h3 className="text-xs font-black text-purple-400 border-b border-white/5 pb-2 uppercase tracking-widest">修士名錄維護</h3>
-                <div className="space-y-4">
+                <div className="space-y-6">
                     {users.map((u, i) => (
-                        <div key={i} className="bg-slate-900/50 p-3 rounded-lg border border-white/5 space-y-2">
-                            <div className="flex justify-between text-xs font-bold text-yellow-500"><span>{u.name}</span><span>Exp: {u.exp}</span></div>
-                            <div className="grid grid-cols-3 gap-1">
-                                <button onClick={()=>{const n=prompt("新名號",u.name); if(n){u.name=n; setUsers([...users]);}}} className="text-[10px] bg-slate-800 p-1 rounded">更名</button>
-                                <button onClick={()=>{const p=prompt("新密語",u.pw); if(p){u.pw=p; setUsers([...users]);}}} className="text-[10px] bg-slate-800 p-1 rounded">重置</button>
-                                <button onClick={()=>{const e=prompt("修為值",u.exp); if(e){u.exp=parseInt(e); setUsers([...users]);}}} className="text-[10px] bg-slate-800 p-1 rounded">調Exp</button>
+                        <div key={i} className="bg-slate-900/80 p-4 rounded-xl border border-yellow-500/20 space-y-4 shadow-xl">
+                            <div className="flex items-center space-x-4">
+                                <div className="relative group">
+                                    <img src={u.avatar} className="w-16 h-16 rounded-full border-2 border-yellow-500 object-cover" />
+                                    <input type="file" id={`avatar-${i}`} hidden accept="image/*" onChange={(e) => handleAvatarChange(i, e)} />
+                                    <label htmlFor={`avatar-${i}`} className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity text-[8px] text-white">易容</label>
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold text-yellow-500">{u.name}</p>
+                                    <p className="text-[10px] text-slate-500 italic">修為積分: {u.exp}</p>
+                                </div>
                             </div>
-                            <button onClick={()=>{if(confirm("逐出？")){setUsers(users.filter(x=>x.name!==u.name));}}} className="w-full py-1 text-[10px] text-red-500">逐出仙門</button>
+                            
+                            <div className="grid grid-cols-2 gap-2">
+                                <button onClick={()=>{const n=prompt("輸入新道號",u.name); if(n){const nu=[...users]; nu[i].name=n; setUsers(nu); localStorage.setItem('sn_u', JSON.stringify(nu));}}} className="text-[10px] bg-slate-800 p-2 rounded border border-white/5 hover:bg-slate-700">更換名號</button>
+                                <button onClick={()=>{const p=prompt("重置神識密語",u.pw); if(p){const nu=[...users]; nu[i].pw=p; setUsers(nu); localStorage.setItem('sn_u', JSON.stringify(nu));}}} className="text-[10px] bg-slate-800 p-2 rounded border border-white/5 hover:bg-slate-700">重置密碼</button>
+                                <button onClick={()=>{const e=prompt("調整積分值",u.exp); if(e){const nu=[...users]; nu[i].exp=parseInt(e); setUsers(nu); localStorage.setItem('sn_u', JSON.stringify(nu));}}} className="text-[10px] bg-slate-800 p-2 rounded border border-white/5 hover:bg-slate-700">調整修為</button>
+                                <button onClick={()=>{if(confirm(`逐出 ${u.name}？`)){const nu=users.filter(x=>x.name!==u.name); setUsers(nu); localStorage.setItem('sn_u', JSON.stringify(nu));}}} className="text-[10px] bg-red-900/30 text-red-400 p-2 rounded border border-red-500/20">逐出仙門</button>
+                            </div>
                         </div>
                     ))}
+                </div>
+            </section>
+
+            {/* 3. 經書管理 */}
+            <section className="glass p-6 rounded-2xl space-y-4">
+                <h3 className="text-xs font-black text-emerald-500 border-b border-white/5 pb-2 uppercase tracking-widest">經書管理</h3>
+                <input type="file" accept=".csv" onChange={handleCSV} className="text-[10px] w-full file:bg-emerald-600 file:border-none file:px-3 file:py-1 file:rounded file:text-black file:font-bold" />
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {batches.map(b=><div key={b.id} className="flex justify-between items-center text-[10px] bg-slate-800/50 p-2 rounded">
+                        <span>{b.d} ({b.c}題)</span>
+                        <button onClick={()=>{if(confirm("焚毀？")){
+                            setWords(words.filter(w=>w.bid!==b.id)); 
+                            setBatches(batches.filter(x=>x.id!==b.id));
+                        }}} className="text-red-500 px-2 font-bold">焚</button>
+                    </div>)}
                 </div>
             </section>
         </div>
