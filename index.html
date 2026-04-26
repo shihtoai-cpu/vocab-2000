@@ -5,162 +5,894 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>仙逆單字傳 - 踏天之路</title>
     
-    <!-- PWA Meta -->
+    <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3655/3655581.png">
     
-    <!-- Google Fonts: Noto Serif TC for Calligraphy style -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- React & Babel -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
+        /* 基礎配置與修仙風格 CSS */
         :root {
-            --gold-primary: #facc15;
-            --gold-glow: 0 0 20px rgba(250, 204, 21, 0.6);
-            --deep-indigo: #1e1b4b;
+            --gold-glow: 0 0 15px rgba(250, 204, 21, 0.5), 0 0 30px rgba(250, 204, 21, 0.2);
+            --blood-glow: 0 0 20px rgba(239, 68, 68, 0.6);
+            --void-bg: #020617;
         }
 
         body {
             font-family: 'Noto Serif TC', serif;
-            background-color: #020617;
-            color: #e2e8f0;
-            overflow-x: hidden;
+            background-color: var(--void-bg);
+            color: #f1f5f9;
             margin: 0;
             padding: 0;
-            user-select: none;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* 琉璃材質面板 */
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
+        .font-calligraphy { font-family: 'Ma Shan Zheng', cursive; }
+
+        /* 頂級琉璃面板特效 */
+        .glass-container {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        /* 鎏金發光文字 */
-        .gold-text {
-            color: var(--gold-primary);
-            text-shadow: var(--gold-glow);
+        /* 鎏金文字與發光邊框 */
+        .gold-border {
+            border: 1px solid #facc15;
+            box-shadow: var(--gold-glow);
         }
 
-        /* 仙界石碑特效 */
-        .stele-glow {
-            box-shadow: inset 0 0 50px rgba(250, 204, 21, 0.1), 0 0 20px rgba(250, 204, 21, 0.2);
+        .gold-text-shimmer {
+            background: linear-gradient(to right, #facc15 20%, #fef08a 40%, #fef08a 60%, #facc15 80%);
+            background-size: 200% auto;
+            color: #000;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite;
         }
 
-        /* 修仙境界動畫 */
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+        @keyframes shine {
+            to { background-position: 200% center; }
         }
-        .animate-float { animation: float 4s ease-in-out infinite; }
 
-        @keyframes rotate-magic {
+        /* 境界動畫 */
+        @keyframes float-ethereal {
+            0%, 100% { transform: translateY(0) scale(1); filter: brightness(1); }
+            50% { transform: translateY(-15px) scale(1.05); filter: brightness(1.3); }
+        }
+        .ethereal-float { animation: float-ethereal 6s ease-in-out infinite; }
+
+        /* 戰鬥反應等級 SSS */
+        .rank-sss {
+            color: #ef4444;
+            text-shadow: 0 0 20px #ef4444, 0 0 40px #ef4444;
+            animation: pulse 0.5s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.2); }
+        }
+
+        /* 捲軸美化 */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #facc15; }
+
+        /* 仙界石碑滾動效果 */
+        .stele-bg {
+            background: linear-gradient(180deg, #1e293b 0%, #020617 100%);
+            border-left: 2px solid #334155;
+            border-right: 2px solid #334155;
+        }
+
+        /* 手機適配全螢幕 */
+        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        
+        /* 陣法旋轉 */
+        .array-rotate {
+            animation: rotate-slow 30s linear infinite;
+        }
+        @keyframes rotate-slow {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
-        .magic-circle {
-            animation: rotate-magic 20s linear infinite;
-            opacity: 0.2;
-        }
-
-        /* 自定義捲軸 */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-
-        /* 閃爍動畫 */
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-        .shimmer-btn {
-            background: linear-gradient(90deg, rgba(250,204,21,0) 0%, rgba(250,204,21,0.4) 50%, rgba(250,204,21,0) 100%);
-            background-size: 200% 100%;
-            animation: shimmer 2s infinite linear;
-        }
-
-        /* 戰鬥 S 級特效 */
-        .rank-s { color: #f87171; text-shadow: 0 0 15px #f87171; }
-        
-        /* PWA 全螢幕修正 */
-        @media screen and (display-mode: standalone) {
-            body { padding-top: env(safe-area-inset-top); }
-        }
     </style>
 
-    <script type="application/json" id="manifest">
+    <script type="application/json" id="pwa-manifest">
     {
         "name": "仙逆單字傳",
-        "short_name": "仙逆單字",
+        "short_name": "仙逆",
         "start_url": ".",
         "display": "standalone",
         "background_color": "#020617",
-        "theme_color": "#0f172a",
-        "icons": [
-            {
-                "src": "https://cdn-icons-png.flaticon.com/512/3655/3655581.png",
-                "sizes": "512x512",
-                "type": "image/png"
-            }
-        ]
+        "theme_color": "#020617",
+        "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/3655/3655581.png", "sizes": "512x512", "type": "image/png" }]
     }
     </script>
 </head>
-<body class="bg-slate-950">
+<body>
     <div id="root"></div>
 
-    <!-- Firebase SDK -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useCallback, useRef } = React;
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
-        // --- 修仙設定數據 ---
+        // ==========================================
+        // 1. 核心數據定義 (境界、單字、道具)
+        // ==========================================
+
         const REALMS = [
-            { name: "凡人", minExp: 0, color: "text-slate-400" },
-            { name: "凝氣", minExp: 150, color: "text-emerald-400" },
-            { name: "築基", minExp: 1000, color: "text-blue-400" },
-            { name: "結丹", minExp: 5000, color: "text-purple-400" },
-            { name: "元嬰", minExp: 20000, color: "text-pink-400" },
-            { name: "化神", minExp: 80000, color: "text-orange-400" },
-            { name: "嬰變", minExp: 250000, color: "text-red-500" },
-            { name: "問鼎", minExp: 800000, color: "text-amber-500" },
-            { name: "陰虛", minExp: 2000000, color: "text-indigo-500" },
-            { name: "陽實", minExp: 5000000, color: "text-yellow-500" },
-            { name: "碎涅", minExp: 15000000, color: "text-cyan-400" },
-            { name: "空涅", minExp: 50000000, color: "text-blue-600" },
-            { name: "空靈", minExp: 150000000, color: "text-purple-600" },
-            { name: "空玄", minExp: 500000000, color: "text-rose-600" },
-            { name: "空劫", minExp: 1500000000, color: "text-red-700" },
-            { name: "踏天", minExp: 5000000000, color: "text-yellow-300 font-black" }
+            { lvl: 0, name: "凡人", color: "text-slate-500", desc: "碌碌無為，百年後不過一坏黃土。" },
+            { lvl: 1, name: "凝氣", color: "text-emerald-400", desc: "引氣入體，壽元百載，初步踏入修真。" },
+            { lvl: 2, name: "築基", color: "text-blue-400", desc: "築就根基，真元固化，可御劍飛行。" },
+            { lvl: 3, name: "結丹", color: "text-purple-400", desc: "結成內丹，壽五百載，乃是一方高手。" },
+            { lvl: 4, name: "元嬰", color: "text-pink-400", desc: "元嬰不滅，肉身可毀，瞬移萬里。" },
+            { lvl: 5, name: "化神", color: "text-orange-400", desc: "神識化形，感悟天道，超脫凡塵。" },
+            { lvl: 6, name: "嬰變", color: "text-rose-500", desc: "肉身與元嬰合一，掌控元力。" },
+            { lvl: 7, name: "問鼎", color: "text-amber-500", desc: "觸摸道之邊緣，意境通神。" },
+            { lvl: 8, name: "陰虛", color: "text-indigo-500", desc: "感悟陰之極致，窺視虛無。" },
+            { lvl: 9, name: "陽實", color: "text-yellow-500", desc: "肉身陽實，意志即天意。" },
+            { lvl: 10, name: "碎涅", color: "text-cyan-400", desc: "涅槃重生，星域之內難逢敵手。" },
+            { lvl: 11, name: "空涅", color: "text-sky-500", desc: "空門第一關，窺視第三步之秘。" },
+            { lvl: 12, name: "空靈", color: "text-indigo-400", desc: "空門第二關，靈魂永恆。" },
+            { lvl: 13, name: "空玄", color: "text-violet-600", desc: "空門第三關，玄妙莫測。" },
+            { lvl: 14, name: "空劫", color: "text-red-700", desc: "天劫之主，萬界共尊。" },
+            { lvl: 15, name: "踏天", color: "text-yellow-300 font-black", desc: "天在腳下，我命由我不由天！" }
         ];
 
-        // --- 核心邏輯函數 ---
-        const calculateExpForLevel = (lvl) => Math.floor(150 * lvl + 12 * Math.pow(lvl, 3));
-        
-        const getRealmInfo = (exp) => {
-            for (let i = REALMS.length - 1; i >= 0; i--) {
-                if (exp >= REALMS[i].minExp) return { ...REALMS[i], index: i };
-            }
-            return { ...REALMS[0], index: 0 };
+        const INITIAL_WORDS = [
+            { id: 1, en: "Immortal", zh: "仙人", ex: "Wang Lin became an Immortal.", mastery: 0 },
+            { id: 2, en: "Reincarnation", zh: "輪迴", ex: "The cycle of reincarnation never ends.", mastery: 0 },
+            { id: 3, en: "Cultivation", zh: "修煉", ex: "Cultivation requires immense willpower.", mastery: 0 },
+            { id: 4, en: "Sacrifice", zh: "犧牲", ex: "To obtain Dao, one must sacrifice everything.", mastery: 0 },
+            { id: 5, en: "Tribulation", zh: "天劫", ex: "The thunder tribulation is coming.", mastery: 0 },
+            { id: 6, en: "Providence", zh: "天命", ex: "Do you believe in divine providence?", mastery: 0 },
+            { id: 7, en: "Forbidden", zh: "禁制", ex: "The cave is sealed with forbidden spells.", mastery: 0 },
+            { id: 8, en: "Sovereign", zh: "至尊", ex: "He is the sovereign of the planet.", mastery: 0 },
+            { id: 9, en: "Eternal", zh: "永恆", ex: "Searching for eternal life.", mastery: 0 },
+            { id: 10, en: "Willpower", zh: "意志", ex: "Strong willpower overcomes talent.", mastery: 0 },
+            // ... (更多單字會透過管理後台匯入)
+        ];
+
+        // ==========================================
+        // 2. 輔助函數 (Exp, Grade, Formatting)
+        // ==========================================
+
+        const calcRequiredExp = (lvl) => {
+            if (lvl === 0) return 150;
+            return Math.floor(150 * (lvl + 1) + 15 * Math.pow(lvl, 3.2));
         };
 
-        // --- Firebase 配置 (使用者需填寫) ---
+        const getRealmByExp = (exp) => {
+            for (let i = REALMS.length - 1; i >= 0; i--) {
+                if (exp >= (i === 0 ? 0 : calcRequiredExp(i-1))) {
+                    // 這裡簡化判斷邏輯
+                    let totalNeeded = 0;
+                    for(let j=0; j<i; j++) totalNeeded += calcRequiredExp(j);
+                    if(exp >= totalNeeded) {
+                         // 持續往上找
+                    } else {
+                        continue;
+                    }
+                }
+            }
+            // 實作一個精準的遞增檢查
+            let currentLevel = 0;
+            let currentTotal = 0;
+            while (currentLevel < REALMS.length - 1) {
+                let nextReq = calcRequiredExp(currentLevel);
+                if (exp >= currentTotal + nextReq) {
+                    currentTotal += nextReq;
+                    currentLevel++;
+                } else {
+                    break;
+                }
+            }
+            return { ...REALMS[currentLevel], nextExp: currentTotal + calcRequiredExp(currentLevel), currentLevelTotal: currentTotal };
+        };
+
+        const getGrade = (time) => {
+            if (time < 1.5) return { label: "SSS", color: "rank-sss", pts: 500 };
+            if (time < 2.5) return { label: "SS", color: "text-red-500", pts: 400 };
+            if (time < 4) return { label: "S", color: "text-orange-500", pts: 300 };
+            if (time < 6) return { label: "A", color: "text-yellow-500", pts: 200 };
+            return { label: "B", color: "text-slate-400", pts: 100 };
+        };
+
+        // ==========================================
+        // 3. 主要組件 - App
+        // ==========================================
+
+        const App = () => {
+            const [gameState, setGameState] = useState('loading'); // loading, auth, home, battle, rebirth, admin, stele
+            const [userProfile, setUserProfile] = useState(null);
+            const [allWords, setAllWords] = useState(INITIAL_WORDS);
+            const [settings, setSettings] = useState({ rounds: 3, qPerRound: 10, retryLimit: 3 });
+            const [dailyRecord, setDailyRecord] = useState({ date: new Date().toDateString(), count: 0 });
+
+            // 系統初始化
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    const savedUser = localStorage.getItem('xianni_user');
+                    const savedWords = localStorage.getItem('xianni_words');
+                    const savedSettings = localStorage.getItem('xianni_settings');
+
+                    if (savedUser) setUserProfile(JSON.parse(savedUser));
+                    if (savedWords) setAllWords(JSON.parse(savedWords));
+                    if (savedSettings) setSettings(JSON.parse(savedSettings));
+                    
+                    setGameState(savedUser ? 'home' : 'auth');
+                }, 2500);
+                return () => clearTimeout(timer);
+            }, []);
+
+            // 存檔機制
+            useEffect(() => {
+                if (userProfile) localStorage.setItem('xianni_user', JSON.stringify(userProfile));
+            }, [userProfile]);
+
+            useEffect(() => {
+                localStorage.setItem('xianni_words', JSON.stringify(allWords));
+            }, [allWords]);
+
+            const handleLogin = (name) => {
+                const newUser = {
+                    name,
+                    exp: 0,
+                    spiritStones: 50,
+                    rebirth: 0,
+                    unlockedTitles: ["初入修真"],
+                    joinDate: Date.now(),
+                    masteredCount: 0
+                };
+                setUserProfile(newUser);
+                setGameState('home');
+            };
+
+            const logout = () => {
+                if(confirm("確定要閉關絕世（登出）嗎？進度將保留於此道存儲中。")) {
+                    setGameState('auth');
+                }
+            };
+
+            // 渲染邏輯
+            return (
+                <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-yellow-500 selection:text-slate-900">
+                    {/* 背景特效層 */}
+                    <div className="fixed inset-0 pointer-events-none z-0">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(30,41,59,0.5)_0%,_transparent_70%)]"></div>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-white/5 rounded-full array-rotate"></div>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-yellow-500/5 rounded-full array-rotate" style={{animationDirection: 'reverse'}}></div>
+                    </div>
+
+                    <div className="relative z-10 max-w-md mx-auto min-h-screen flex flex-col">
+                        {gameState === 'loading' && <LoadingView />}
+                        {gameState === 'auth' && <AuthView onLogin={handleLogin} />}
+                        {gameState === 'home' && (
+                            <HomeView 
+                                profile={userProfile} 
+                                setGameState={setGameState} 
+                                logout={logout}
+                            />
+                        )}
+                        {gameState === 'battle' && (
+                            <BattleView 
+                                words={allWords} 
+                                profile={userProfile} 
+                                setProfile={setUserProfile} 
+                                setGameState={setGameState}
+                                settings={settings}
+                            />
+                        )}
+                        {gameState === 'rebirth' && (
+                            <RebirthView 
+                                profile={userProfile} 
+                                setProfile={setUserProfile} 
+                                setGameState={setGameState} 
+                            />
+                        )}
+                        {gameState === 'stele' && <SteleView setGameState={setGameState} />}
+                        {gameState === 'admin' && (
+                            <AdminView 
+                                settings={settings} 
+                                setSettings={setSettings} 
+                                words={allWords} 
+                                setWords={setAllWords}
+                                setGameState={setGameState} 
+                            />
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 4. 子組件 - 載入與認證
+        // ==========================================
+
+        const LoadingView = () => (
+            <div className="flex-1 flex flex-col items-center justify-center space-y-8">
+                <div className="relative">
+                    <div className="w-32 h-32 border-4 border-yellow-500/20 rounded-full animate-ping"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-5xl font-calligraphy gold-text-shimmer">仙逆</span>
+                    </div>
+                </div>
+                <div className="text-slate-500 tracking-[0.5em] text-sm animate-pulse">天道修煉系統啟動中...</div>
+            </div>
+        );
+
+        const AuthView = ({ onLogin }) => {
+            const [name, setName] = useState("");
+            return (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-10">
+                    <div className="text-center space-y-4">
+                        <h1 className="text-6xl font-calligraphy gold-text-shimmer">仙逆單字傳</h1>
+                        <p className="text-slate-500 tracking-widest text-sm">踏天之路，始於足下</p>
+                    </div>
+                    
+                    <div className="w-full glass-container p-8 rounded-[2rem] border-yellow-500/20">
+                        <p className="text-xs text-yellow-500 mb-4 tracking-tighter uppercase font-bold">修士名號</p>
+                        <input 
+                            type="text" 
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="輸入你的道號..."
+                            className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-4 focus:outline-none focus:border-yellow-500 transition-all text-xl"
+                        />
+                        <button 
+                            onClick={() => name && onLogin(name)}
+                            className="w-full mt-6 py-4 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black rounded-xl transition-all active:scale-95 shadow-[0_0_20px_rgba(250,204,21,0.3)]"
+                        >
+                            開 始 修 煉
+                        </button>
+                    </div>
+                    
+                    <p className="text-[10px] text-slate-600 text-center leading-loose">
+                        本系統將感悟真意化為單字<br/>
+                        唯有意志堅定者，方能成就踏天之境
+                    </p>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 5. 子組件 - 主頁 (Dashboard)
+        // ==========================================
+
+        const HomeView = ({ profile, setGameState, logout }) => {
+            const realm = useMemo(() => getRealmByExp(profile.exp), [profile.exp]);
+            const progress = ((profile.exp - realm.currentLevelTotal) / (realm.nextExp - realm.currentLevelTotal)) * 100;
+
+            return (
+                <div className="flex-1 flex flex-col p-6 pb-24">
+                    {/* 頂部修士狀態 */}
+                    <div className="mt-8 glass-container p-6 rounded-3xl relative overflow-hidden group">
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl group-hover:bg-yellow-500/10 transition-all"></div>
+                        
+                        <div className="flex items-center space-x-5">
+                            <div className="relative">
+                                <div className="w-20 h-20 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-white/10 flex items-center justify-center text-3xl shadow-inner">
+                                    {profile.rebirth > 0 ? "🔱" : "☯️"}
+                                </div>
+                                {profile.rebirth > 0 && (
+                                    <div className="absolute -top-2 -right-2 bg-red-600 text-[10px] px-2 py-0.5 rounded-full border border-red-400 animate-pulse">
+                                        轉世×{profile.rebirth}
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold tracking-wide">{profile.name}</h2>
+                                <p className={`font-black tracking-[0.2em] ${realm.color}`}>{realm.name}期修士</p>
+                            </div>
+                        </div>
+
+                        {/* 境界進度條 */}
+                        <div className="mt-8 space-y-2">
+                            <div className="flex justify-between text-[10px] tracking-tighter text-slate-400">
+                                <span>修為感悟</span>
+                                <span>{profile.exp} / {realm.nextExp}</span>
+                            </div>
+                            <div className="w-full h-3 bg-slate-900/80 rounded-full border border-white/5 p-0.5 overflow-hidden">
+                                <div 
+                                    className="h-full bg-gradient-to-r from-yellow-600 to-yellow-300 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(250,204,21,0.5)]"
+                                    style={{ width: `${progress}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-[11px] text-slate-500 italic mt-2 line-clamp-1">「{realm.desc}」</p>
+                        </div>
+                    </div>
+
+                    {/* 資源面板 */}
+                    <div className="grid grid-cols-2 gap-4 mt-6">
+                        <div className="glass-container p-4 rounded-2xl flex items-center space-x-3">
+                            <div className="text-cyan-400 bg-cyan-400/10 p-2 rounded-lg"><i data-lucide="gem" size={18}></i></div>
+                            <div>
+                                <p className="text-[10px] text-slate-500 uppercase">下品靈石</p>
+                                <p className="font-mono font-bold text-cyan-400">{profile.spiritStones}</p>
+                            </div>
+                        </div>
+                        <div className="glass-container p-4 rounded-2xl flex items-center space-x-3">
+                            <div className="text-emerald-400 bg-emerald-400/10 p-2 rounded-lg"><i data-lucide="book-open" size={18}></i></div>
+                            <div>
+                                <p className="text-[10px] text-slate-500 uppercase">感悟單字</p>
+                                <p className="font-mono font-bold text-emerald-400">{profile.masteredCount}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 主選單 */}
+                    <div className="mt-8 grid grid-cols-2 gap-4">
+                        <button 
+                            onClick={() => setGameState('battle')}
+                            className="h-40 glass-container rounded-[2rem] flex flex-col items-center justify-center space-y-4 border-yellow-500/20 hover:border-yellow-500/50 transition-all group active:scale-95"
+                        >
+                            <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center text-yellow-500 group-hover:scale-110 transition-transform">
+                                <i data-lucide="swords" size={32}></i>
+                            </div>
+                            <span className="font-bold tracking-[0.3em]">入定修煉</span>
+                        </button>
+
+                        <button 
+                            onClick={() => setGameState('stele')}
+                            className="h-40 glass-container rounded-[2rem] flex flex-col items-center justify-center space-y-4 border-slate-500/20 hover:border-slate-500/50 transition-all group active:scale-95"
+                        >
+                            <div className="w-16 h-16 bg-slate-500/10 rounded-full flex items-center justify-center text-slate-400 group-hover:scale-110 transition-transform">
+                                <i data-lucide="scroll-text" size={32}></i>
+                            </div>
+                            <span className="font-bold tracking-[0.3em]">仙界石碑</span>
+                        </button>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-4">
+                         <button 
+                            onClick={() => setGameState('rebirth')}
+                            className="py-4 glass-container rounded-2xl flex items-center justify-center space-x-2 text-red-400 border-red-500/10 hover:bg-red-500/5"
+                        >
+                            <i data-lucide="flame" size={18}></i>
+                            <span className="text-sm font-bold tracking-widest">嫁衣神功</span>
+                        </button>
+                        <button 
+                            onClick={() => setGameState('admin')}
+                            className="py-4 glass-container rounded-2xl flex items-center justify-center space-x-2 text-slate-400 border-slate-500/10"
+                        >
+                            <i data-lucide="settings" size={18}></i>
+                            <span className="text-sm font-bold tracking-widest">洞府設置</span>
+                        </button>
+                    </div>
+
+                    {/* 底部導航模擬 */}
+                    <div className="fixed bottom-0 left-0 right-0 p-6 flex justify-center">
+                        <button onClick={logout} className="px-8 py-3 glass-container rounded-full text-xs text-slate-500 hover:text-white transition-colors">
+                            閉關絕世 (登出)
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 6. 子組件 - 修煉戰鬥 (BattleView)
+        // ==========================================
+
+        const BattleView = ({ words, profile, setProfile, setGameState, settings }) => {
+            const [step, setStep] = useState(0);
+            const [questions, setQuestions] = useState([]);
+            const [currentOptions, setCurrentOptions] = useState([]);
+            const [startTime, setStartTime] = useState(0);
+            const [results, setResults] = useState([]);
+            const [combo, setCombo] = useState(0);
+            const [feedback, setFeedback] = useState(null); // { grade, pts }
+            const [isFinished, setIsFinished] = useState(false);
+
+            // 初始化題目
+            useEffect(() => {
+                const picked = [...words].sort(() => 0.5 - Math.random()).slice(0, settings.qPerRound);
+                setQuestions(picked);
+                genOptions(picked[0]);
+                setStartTime(Date.now());
+            }, []);
+
+            const genOptions = (correct) => {
+                const others = words.filter(w => w.id !== correct.id).sort(() => 0.5 - Math.random()).slice(0, 3);
+                setCurrentOptions([...others, correct].sort(() => 0.5 - Math.random()));
+            };
+
+            const handleAnswer = (selectedId) => {
+                if (feedback) return; // 防止連點
+
+                const correct = questions[step].id === selectedId;
+                const timeTaken = (Date.now() - startTime) / 1000;
+                
+                if (correct) {
+                    const gradeInfo = getGrade(timeTaken);
+                    const comboBonus = Math.floor(combo * 15);
+                    const totalGained = Math.floor((gradeInfo.pts + comboBonus) * (1 + profile.rebirth * 0.5));
+                    
+                    setFeedback({ label: gradeInfo.label, pts: totalGained, color: gradeInfo.color });
+                    setCombo(c => c + 1);
+                    setResults([...results, { correct: true, pts: totalGained }]);
+                    
+                    // 增加經驗
+                    setProfile(prev => ({ 
+                        ...prev, 
+                        exp: prev.exp + totalGained,
+                        spiritStones: prev.spiritStones + (gradeInfo.label === 'SSS' ? 2 : 1)
+                    }));
+                } else {
+                    setFeedback({ label: "MISS", pts: 0, color: "text-red-500" });
+                    setCombo(0);
+                    setResults([...results, { correct: false, pts: 0 }]);
+                }
+
+                setTimeout(() => {
+                    setFeedback(null);
+                    if (step + 1 < questions.length) {
+                        setStep(step + 1);
+                        genOptions(questions[step + 1]);
+                        setStartTime(Date.now());
+                    } else {
+                        setIsFinished(true);
+                        confetti({
+                            particleCount: 150,
+                            spread: 70,
+                            origin: { y: 0.6 },
+                            colors: ['#facc15', '#eab308', '#ffffff']
+                        });
+                    }
+                }, 800);
+            };
+
+            if (isFinished) {
+                const totalExp = results.reduce((a, b) => a + b.pts, 0);
+                const correctCount = results.filter(r => r.correct).length;
+                return (
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-8 animate-in fade-in duration-700">
+                        <div className="glass-container w-full p-8 rounded-[2.5rem] text-center space-y-6 border-yellow-500/30">
+                            <h2 className="text-3xl font-calligraphy gold-text-shimmer">修煉圓滿</h2>
+                            <div className="py-4">
+                                <p className="text-slate-500 text-xs uppercase tracking-[0.2em]">本次獲得修為</p>
+                                <p className="text-6xl font-black text-yellow-500 mt-2">+{totalExp}</p>
+                            </div>
+                            
+                            <div className="flex justify-around border-t border-white/5 pt-6">
+                                <div>
+                                    <p className="text-[10px] text-slate-500 uppercase">感悟成功</p>
+                                    <p className="text-xl font-bold text-emerald-400">{correctCount} / {questions.length}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-slate-500 uppercase">靈石獲取</p>
+                                    <p className="text-xl font-bold text-cyan-400">+{Math.floor(totalExp/100)}</p>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={() => setGameState('home')}
+                                className="w-full py-4 bg-yellow-500 text-slate-950 font-black rounded-2xl hover:scale-105 transition-all shadow-lg"
+                            >
+                                出 關
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            const current = questions[step];
+            if (!current) return <LoadingView />;
+
+            return (
+                <div className="flex-1 flex flex-col p-6">
+                    {/* 頂部進度與連擊 */}
+                    <div className="flex justify-between items-center mt-4">
+                        <button onClick={() => confirm("現在退出將損失本次修煉感悟，確定嗎？") && setGameState('home')} className="text-slate-500 hover:text-white transition-colors">
+                            <i data-lucide="move-left"></i>
+                        </button>
+                        <div className="flex-1 mx-8 h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                            <div className="h-full bg-yellow-500 transition-all duration-300" style={{ width: `${(step / questions.length) * 100}%` }}></div>
+                        </div>
+                        <div className="w-12 text-right">
+                            <span className="text-xs font-mono text-slate-500">{step + 1}/{questions.length}</span>
+                        </div>
+                    </div>
+
+                    {/* 題目核心區 */}
+                    <div className="flex-1 flex flex-col items-center justify-center relative">
+                        {feedback && (
+                            <div className={`absolute top-10 text-8xl font-black italic z-20 animate-ping ${feedback.color}`}>
+                                {feedback.label}
+                            </div>
+                        )}
+
+                        {combo > 1 && (
+                            <div className="mb-4 px-4 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-full">
+                                <span className="text-yellow-500 font-bold text-sm tracking-tighter">COMBO × {combo}</span>
+                            </div>
+                        )}
+
+                        <div className="text-center space-y-2 mb-12">
+                            <p className="text-slate-500 tracking-[0.3em] text-xs uppercase">感悟真意</p>
+                            <h1 className="text-6xl font-black tracking-tight text-white">{current.en}</h1>
+                            <p className="text-slate-600 italic text-sm mt-4 px-8 opacity-60">"{current.ex}"</p>
+                        </div>
+
+                        <div className="w-full space-y-4">
+                            {currentOptions.map((opt, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => handleAnswer(opt.id)}
+                                    className="w-full py-5 glass-container rounded-2xl text-xl font-bold hover:border-yellow-500/50 active:scale-95 transition-all relative overflow-hidden group"
+                                >
+                                    <div className="absolute inset-0 bg-yellow-500/5 translate-y-full group-hover:translate-y-0 transition-transform"></div>
+                                    <span className="relative z-10">{opt.zh}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="py-6 text-center">
+                        <p className="text-[10px] text-slate-700 tracking-widest uppercase">靈魂共鳴中...</p>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 7. 子組件 - 嫁衣神功 (RebirthView)
+        // ==========================================
+
+        const RebirthView = ({ profile, setProfile, setGameState }) => {
+            const canRebirth = profile.exp >= 5000;
+            
+            const handleRebirth = () => {
+                if (!canRebirth) return;
+                if (confirm("散功重修，需將現有修為化為虛無，換取百世輪迴之印記。此舉逆天，你確定嗎？")) {
+                    setProfile(prev => ({
+                        ...prev,
+                        exp: 0,
+                        rebirth: prev.rebirth + 1,
+                        spiritStones: prev.spiritStones + 5000,
+                        unlockedTitles: [...prev.unlockedTitles, `第${prev.rebirth + 1}世重生`]
+                    }));
+                    setGameState('home');
+                }
+            };
+
+            return (
+                <div className="flex-1 flex flex-col p-8 items-center justify-center text-center space-y-8">
+                    <div className="relative">
+                        <div className="w-32 h-32 bg-red-600/20 rounded-full flex items-center justify-center text-red-500 animate-pulse">
+                            <i data-lucide="flame" size={64}></i>
+                        </div>
+                        <div className="absolute inset-0 border-4 border-red-500/20 rounded-full scale-125 animate-ping"></div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <h2 className="text-3xl font-calligraphy text-red-500">嫁衣神功</h2>
+                        <p className="text-slate-500 text-sm leading-relaxed">
+                            「散去一身凡俗修為，凝聚轉世印記。」<br/>
+                            每轉世一次，獲得修為的速度永久提升 <span className="text-yellow-500">50%</span>。
+                        </p>
+                    </div>
+
+                    <div className="w-full glass-container p-6 rounded-3xl space-y-4 border-red-500/10">
+                        <div className="flex justify-between text-xs">
+                            <span className="text-slate-400">當前轉世次數</span>
+                            <span className="text-white font-bold">{profile.rebirth}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                            <span className="text-slate-400">修為獲得倍率</span>
+                            <span className="text-emerald-400 font-bold">× {(1 + profile.rebirth * 0.5).toFixed(1)}</span>
+                        </div>
+                        <div className="pt-4 border-t border-white/5">
+                            <p className={`text-xs font-bold ${canRebirth ? 'text-emerald-400' : 'text-red-400'}`}>
+                                要求：修為達到 結丹期 (5,000 Exp)<br/>
+                                目前：{profile.exp.toLocaleString()} / 5,000
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="w-full space-y-4">
+                        <button 
+                            disabled={!canRebirth}
+                            onClick={handleRebirth}
+                            className={`w-full py-4 rounded-2xl font-black tracking-[0.3em] transition-all ${canRebirth ? 'bg-red-600 hover:bg-red-500 shadow-[0_0_20px_rgba(220,38,38,0.4)]' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                        >
+                            散 功 重 修
+                        </button>
+                        <button onClick={() => setGameState('home')} className="text-slate-500 text-sm underline underline-offset-8">
+                            暫且罷了，我再想想
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 8. 子組件 - 管理後台 (AdminView)
+        // ==========================================
+
+        const AdminView = ({ settings, setSettings, words, setWords, setGameState }) => {
+            const [pass, setPass] = useState("");
+            const [isAuthed, setIsAuthed] = useState(false);
+            const [importText, setImportText] = useState("");
+
+            const handleImport = () => {
+                try {
+                    const lines = importText.split('\n').filter(l => l.trim());
+                    const newWords = lines.map((l, index) => {
+                        const [en, zh, ex] = l.split(',');
+                        return { id: Date.now() + index, en: en.trim(), zh: zh.trim(), ex: ex?.trim() || "", mastery: 0 };
+                    });
+                    setWords([...words, ...newWords]);
+                    setImportText("");
+                    alert(`成功引進 ${newWords.length} 卷真意經書！`);
+                } catch (e) { alert("格式錯誤，請確保為：英文,中文,例句"); }
+            };
+
+            if (!isAuthed) {
+                return (
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-6">
+                        <h2 className="text-2xl font-bold gold-text-shimmer">長輩禁制</h2>
+                        <input 
+                            type="password" 
+                            value={pass}
+                            onChange={e => setPass(e.target.value)}
+                            placeholder="輸入護教密碼 (123456)"
+                            className="w-full p-4 glass-container rounded-xl text-center focus:outline-none"
+                        />
+                        <button onClick={() => pass === "123456" ? setIsAuthed(true) : alert("密語錯誤！")} className="w-full py-4 bg-slate-800 rounded-xl font-bold">解開禁制</button>
+                        <button onClick={() => setGameState('home')} className="text-slate-500 text-sm">返回洞府</button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="flex-1 flex flex-col p-6 space-y-6 overflow-y-auto">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-bold">洞府禁制管理</h2>
+                        <button onClick={() => setGameState('home')} className="text-slate-500"><i data-lucide="x"></i></button>
+                    </div>
+
+                    {/* 參數設定 */}
+                    <div className="glass-container p-6 rounded-3xl space-y-4">
+                        <h3 className="text-sm font-bold text-yellow-500 uppercase tracking-widest border-b border-white/5 pb-2">修煉參數</h3>
+                        <div className="space-y-4">
+                            <label className="block">
+                                <span className="text-xs text-slate-500">每輪感悟題數</span>
+                                <input type="number" value={settings.qPerRound} onChange={e => setSettings({...settings, qPerRound: parseInt(e.target.value)})} className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2" />
+                            </label>
+                            <label className="block">
+                                <span className="text-xs text-slate-500">敗部復活次數</span>
+                                <input type="number" value={settings.retryLimit} onChange={e => setSettings({...settings, retryLimit: parseInt(e.target.value)})} className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2" />
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* 字庫管理 */}
+                    <div className="glass-container p-6 rounded-3xl space-y-4">
+                        <h3 className="text-sm font-bold text-emerald-500 uppercase tracking-widest border-b border-white/5 pb-2">萬卷經書管理 ({words.length})</h3>
+                        <textarea 
+                            value={importText}
+                            onChange={e => setImportText(e.target.value)}
+                            placeholder="格式：英文,中文,例句 (每行一條)"
+                            className="w-full h-32 bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs font-mono"
+                        ></textarea>
+                        <button onClick={handleImport} className="w-full py-3 bg-emerald-600 rounded-xl text-xs font-bold">匯入經書</button>
+                        
+                        <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
+                            {words.map(w => (
+                                <div key={w.id} className="flex justify-between items-center p-2 bg-slate-900/50 rounded-lg border border-white/5 text-[10px]">
+                                    <span className="font-bold">{w.en} - {w.zh}</span>
+                                    <button onClick={() => setWords(words.filter(x => x.id !== w.id))} className="text-red-500">刪除</button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={() => confirm("確定要施展核彈級禁術，清空所有字庫嗎？") && setWords([])}
+                            className="w-full py-2 border border-red-500/30 text-red-500 rounded-lg text-[10px] uppercase font-bold"
+                        >
+                            一鍵核彈級清空
+                        </button>
+                    </div>
+
+                    <div className="text-center py-4">
+                        <p className="text-[10px] text-slate-700">仙逆單字傳 v1.2.0 | 踏天禁制模塊</p>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 9. 子組件 - 仙界石碑 (SteleView)
+        // ==========================================
+
+        const SteleView = ({ setGameState }) => {
+            const dummyLeaders = [
+                { name: "王林", exp: 9999999999, realm: "踏天", rebirth: 99 },
+                { name: "蘇銘", exp: 8888888888, realm: "大界", rebirth: 81 },
+                { name: "孟浩", exp: 7777777777, realm: "九封", rebirth: 72 },
+                { name: "清水", exp: 500000000, realm: "空涅", rebirth: 12 },
+                { name: "天運子", exp: 450000000, realm: "空涅", rebirth: 33 },
+                { name: "紅蝶", exp: 20000000, realm: "元嬰", rebirth: 0 },
+            ];
+
+            return (
+                <div className="flex-1 flex flex-col p-6 space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-2xl font-calligraphy gold-text-shimmer">仙界石碑</h2>
+                        <button onClick={() => setGameState('home')} className="text-slate-500"><i data-lucide="x"></i></button>
+                    </div>
+
+                    <div className="flex-1 stele-bg rounded-t-[3rem] p-6 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent"></div>
+                        
+                        <div className="space-y-4 overflow-y-auto h-full pr-2">
+                            {dummyLeaders.map((m, i) => (
+                                <div key={i} className={`relative p-4 rounded-2xl flex items-center space-x-4 ${i === 0 ? 'bg-yellow-500/10 border border-yellow-500/30 gold-border scale-105 my-4' : 'bg-slate-900/40 border border-white/5'}`}>
+                                    <div className={`w-10 h-10 flex items-center justify-center font-black text-xl ${i === 0 ? 'text-yellow-400' : 'text-slate-600'}`}>
+                                        {i + 1}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center space-x-2">
+                                            <span className={`font-bold ${i === 0 ? 'text-yellow-400' : ''}`}>{m.name}</span>
+                                            {m.rebirth > 0 && <span className="text-[8px] bg-red-600 px-1 rounded text-white">印×{m.rebirth}</span>}
+                                        </div>
+                                        <div className="flex justify-between items-end">
+                                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">{m.realm}期</span>
+                                            <span className="text-xs font-mono text-slate-400">{m.exp.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                    {i === 0 && <div className="absolute -top-3 -left-3 rotate-12 text-yellow-500 animate-bounce"><i data-lucide="crown"></i></div>}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 10. 初始化與啟動
+        // ==========================================
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+
+        // Lucide 圖示初始化
+        setTimeout(() => lucide.createIcons(), 1000);
+
+        // PWA Service Worker (Inline)
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('install', e => e.waitUntil(caches.open('v1').then(c => c.addAll(['/']))));
+                self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
+            `;
+            const blob = new Blob([swCode], {type: 'text/javascript'});
+            navigator.serviceWorker.register(URL.createObjectURL(blob));
+        }
+
+        // Firebase Config 預留位置
+        // 請在此填入您的 Firebase 配置以啟用雲端同步功能
         const firebaseConfig = {
            apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
   authDomain: "vocab-2000.firebaseapp.com",
@@ -169,564 +901,6 @@
   messagingSenderId: "459452518715",
   appId: "1:459452518715:web:2842926df8a8d73831a71e"
         };
-
-        // 初始化 Firebase (若未填寫則進入 Demo 模式)
-        let db = null;
-        let auth = null;
-        try {
-            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.firestore();
-                auth = firebase.auth();
-            }
-        } catch (e) { console.error("Firebase Init Error", e); }
-
-        // --- 組件: 閃屏載入 ---
-        const LoadingScreen = () => (
-            <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950 z-50">
-                <div className="relative">
-                    <div className="w-32 h-32 border-4 border-yellow-500/20 rounded-full animate-ping"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-4xl font-black gold-text tracking-[0.5em] animate-pulse">仙逆</div>
-                    </div>
-                </div>
-                <div className="mt-8 text-slate-500 tracking-widest animate-bounce">天道循環，因果始然...</div>
-            </div>
-        );
-
-        // --- 組件: 背景特效 ---
-        const BackgroundEffect = () => (
-            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-                <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] magic-circle flex items-center justify-center">
-                    <div className="w-[800px] h-[800px] border-[1px] border-yellow-500/10 rounded-full"></div>
-                    <div className="absolute w-[600px] h-[600px] border-[1px] border-indigo-500/10 rounded-full"></div>
-                </div>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_#020617_80%)]"></div>
-            </div>
-        );
-
-        // --- 主應用邏輯 ---
-        const App = () => {
-            const [loading, setLoading] = useState(true);
-            const [user, setUser] = useState(null);
-            const [view, setView] = useState('home'); // home, battle, admin, rebirth
-            const [profile, setProfile] = useState({
-                name: "無名修士",
-                exp: 0,
-                rebirth: 0,
-                roundsToday: 0,
-                lastActive: new Date().toDateString(),
-                spiritStones: 100,
-                savedGame: null
-            });
-            const [words, setWords] = useState([
-                { id: 1, en: "Dao", zh: "道", level: 1 },
-                { id: 2, en: "Cultivation", zh: "修煉", level: 1 },
-                { id: 3, en: "Tribulation", zh: "天劫", level: 2 },
-                { id: 4, en: "Alchemy", zh: "煉丹", level: 2 },
-                { id: 5, en: "Talisman", zh: "符籙", level: 2 },
-                { id: 6, en: "Reincarnation", zh: "輪迴", level: 3 }
-            ]);
-            const [leaderboard, setLeaderboard] = useState([]);
-            const [settings, setSettings] = useState({
-                dailyRounds: 3,
-                questionsPerRound: 10,
-                retryLimit: 3
-            });
-
-            // 模擬初始化
-            useEffect(() => {
-                setTimeout(() => {
-                    setLoading(false);
-                    // 模擬從本地讀取
-                    const localData = localStorage.getItem('xian_ni_profile');
-                    if (localData) setProfile(JSON.parse(localData));
-                    
-                    const localSettings = localStorage.getItem('xian_ni_settings');
-                    if (localSettings) setSettings(JSON.parse(localSettings));
-                }, 2000);
-            }, []);
-
-            // 持久化儲存
-            useEffect(() => {
-                localStorage.setItem('xian_ni_profile', JSON.stringify(profile));
-                if (db && auth?.currentUser) {
-                    db.collection('users').doc(auth.currentUser.uid).set(profile, { merge: true });
-                }
-            }, [profile]);
-
-            // 處理經驗值增加
-            const addExp = (amount) => {
-                const multiplier = 1 + (profile.rebirth * 0.5);
-                const totalAdd = Math.floor(amount * multiplier);
-                setProfile(prev => ({ ...prev, exp: prev.exp + totalAdd }));
-                return totalAdd;
-            };
-
-            // --- 介面切換器 ---
-            const renderContent = () => {
-                if (view === 'battle') return <BattleScreen words={words} profile={profile} setProfile={setProfile} setView={setView} settings={settings} addExp={addExp} />;
-                if (view === 'admin') return <AdminPanel settings={settings} setSettings={setSettings} setView={setView} words={words} setWords={setWords} />;
-                if (view === 'rebirth') return <RebirthScreen profile={profile} setProfile={setProfile} setView={setView} />;
-                return <Dashboard profile={profile} setView={setView} leaderboard={leaderboard} />;
-            };
-
-            if (loading) return <LoadingScreen />;
-
-            return (
-                <div className="relative min-h-screen text-slate-200">
-                    <BackgroundEffect />
-                    <div className="relative z-10 max-w-md mx-auto min-h-screen flex flex-col">
-                        {renderContent()}
-                    </div>
-                </div>
-            );
-        };
-
-        // --- 組件: 儀表板 (Dashboard) ---
-        const Dashboard = ({ profile, setView, leaderboard }) => {
-            const realm = getRealmInfo(profile.exp);
-            
-            return (
-                <div className="flex-1 p-6 flex flex-col">
-                    {/* 頂部狀態欄 */}
-                    <div className="glass-panel rounded-3xl p-6 mt-4 mb-6 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-20"><i data-lucide="sparkles"></i></div>
-                        <div className="flex items-center space-x-4 mb-4">
-                            <div className="w-16 h-16 rounded-full border-2 border-yellow-500/50 flex items-center justify-center bg-slate-800 text-2xl">
-                                {profile.rebirth > 0 ? "印" : "修"}
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold tracking-wider">{profile.name}</h2>
-                                <p className={`text-sm font-bold ${realm.color}`}>{realm.name}修士</p>
-                            </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-xs mb-1">
-                                <span>修為進度</span>
-                                <span>{profile.exp} / {REALMS[realm.index + 1]?.minExp || 'MAX'}</span>
-                            </div>
-                            <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
-                                <div 
-                                    className="h-full bg-gradient-to-r from-yellow-600 to-yellow-300 transition-all duration-1000"
-                                    style={{ width: `${(profile.exp / (REALMS[realm.index+1]?.minExp || profile.exp)) * 100}%` }}
-                                ></div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-2 mt-6 text-center">
-                            <div className="bg-slate-800/50 p-2 rounded-xl">
-                                <p className="text-[10px] text-slate-400">轉世次數</p>
-                                <p className="text-yellow-500 font-bold">{profile.rebirth}</p>
-                            </div>
-                            <div className="bg-slate-800/50 p-2 rounded-xl">
-                                <p className="text-[10px] text-slate-400">今日輪次</p>
-                                <p className="text-emerald-400 font-bold">{profile.roundsToday}/3</p>
-                            </div>
-                            <div className="bg-slate-800/50 p-2 rounded-xl">
-                                <p className="text-[10px] text-slate-400">靈石</p>
-                                <p className="text-cyan-400 font-bold">{profile.spiritStones}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 功能按鈕區 */}
-                    <div className="grid grid-cols-2 gap-4 mb-8">
-                        <button 
-                            onClick={() => setView('battle')}
-                            className="h-32 glass-panel rounded-2xl flex flex-col items-center justify-center space-y-2 hover:border-yellow-500/50 transition-all group active:scale-95"
-                        >
-                            <div className="w-12 h-12 bg-yellow-500/10 rounded-full flex items-center justify-center text-yellow-500 group-hover:scale-110 transition-transform">
-                                <i data-lucide="sword"></i>
-                            </div>
-                            <span className="font-bold tracking-widest">開始修煉</span>
-                        </button>
-                        <button 
-                            onClick={() => setView('rebirth')}
-                            className="h-32 glass-panel rounded-2xl flex flex-col items-center justify-center space-y-2 hover:border-red-500/50 transition-all group active:scale-95"
-                        >
-                            <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
-                                <i data-lucide="flame"></i>
-                            </div>
-                            <span className="font-bold tracking-widest">嫁衣神功</span>
-                        </button>
-                    </div>
-
-                    {/* 仙界石碑 (排行榜) */}
-                    <div className="flex-1 glass-panel rounded-t-3xl p-6 stele-glow flex flex-col">
-                        <h3 className="text-center gold-text text-xl font-black mb-6 tracking-[0.3em]">仙界石碑</h3>
-                        <div className="flex-1 overflow-y-auto space-y-4">
-                            {[
-                                { name: "王林", exp: 999999999, realm: "踏天" },
-                                { name: "蘇銘", exp: 888888888, realm: "大界" },
-                                { name: "孟浩", exp: 777777777, realm: "九封" },
-                                { name: "清水", exp: 50000000, realm: "空涅" }
-                            ].map((monk, i) => (
-                                <div key={i} className={`flex items-center justify-between p-3 rounded-lg ${i === 0 ? 'bg-yellow-500/10 border border-yellow-500/30' : 'bg-slate-800/30'}`}>
-                                    <div className="flex items-center space-x-3">
-                                        <span className={`text-lg font-black ${i === 0 ? 'text-yellow-400' : 'text-slate-500'}`}>{i + 1}</span>
-                                        <div>
-                                            <p className={`font-bold ${i === 0 ? 'text-yellow-400' : ''}`}>{monk.name}</p>
-                                            <p className="text-[10px] text-slate-500">{monk.realm}</p>
-                                        </div>
-                                    </div>
-                                    <span className="text-xs font-mono text-slate-400">{monk.exp.toLocaleString()}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* 底部導航 */}
-                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-6 flex justify-between items-center">
-                        <button onClick={() => setView('admin')} className="p-4 glass-panel rounded-full text-slate-400 hover:text-white transition-colors">
-                            <i data-lucide="settings"></i>
-                        </button>
-                        <div className="text-[10px] text-slate-600 tracking-tighter">逆天而行，何懼生死</div>
-                        <button className="p-4 glass-panel rounded-full text-slate-400 hover:text-white transition-colors">
-                            <i data-lucide="user"></i>
-                        </button>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- 組件: 戰鬥修煉 (Battle Screen) ---
-        const BattleScreen = ({ words, profile, setProfile, setView, settings, addExp }) => {
-            const [step, setStep] = useState(0);
-            const [currentRoundWords, setCurrentRoundWords] = useState([]);
-            const [options, setOptions] = useState([]);
-            const [startTime, setStartTime] = useState(Date.now());
-            const [results, setResults] = useState([]);
-            const [combo, setCombo] = useState(0);
-            const [finished, setFinished] = useState(false);
-            const [showFeedback, setShowFeedback] = useState(null); // 'S', 'A', 'B', 'Miss'
-
-            // 初始化一輪
-            useEffect(() => {
-                const shuffled = [...words].sort(() => 0.5 - Math.random()).slice(0, settings.questionsPerRound);
-                setCurrentRoundWords(shuffled);
-                generateOptions(shuffled[0]);
-                setStartTime(Date.now());
-            }, []);
-
-            const generateOptions = (correctWord) => {
-                const others = words.filter(w => w.id !== correctWord.id).sort(() => 0.5 - Math.random()).slice(0, 3);
-                const opts = [...others, correctWord].sort(() => 0.5 - Math.random());
-                setOptions(opts);
-            };
-
-            const handleAnswer = (selectedId) => {
-                const correct = currentRoundWords[step].id === selectedId;
-                const timeTaken = (Date.now() - startTime) / 1000;
-                let grade = 'C';
-                let pts = 100;
-
-                if (correct) {
-                    if (timeTaken < 2) { grade = 'S'; pts = 500; }
-                    else if (timeTaken < 5) { grade = 'A'; pts = 300; }
-                    else { grade = 'B'; pts = 200; }
-                    
-                    setShowFeedback(grade);
-                    setCombo(c => c + 1);
-                    const actualPts = addExp(pts + (combo * 10));
-                    setResults([...results, { correct: true, grade, pts: actualPts }]);
-                } else {
-                    setShowFeedback('Miss');
-                    setCombo(0);
-                    setResults([...results, { correct: false, grade: 'F', pts: 0 }]);
-                }
-
-                setTimeout(() => {
-                    setShowFeedback(null);
-                    if (step + 1 < currentRoundWords.length) {
-                        setStep(step + 1);
-                        generateOptions(currentRoundWords[step + 1]);
-                        setStartTime(Date.now());
-                    } else {
-                        setFinished(true);
-                        setProfile(prev => ({ ...prev, roundsToday: prev.roundsToday + 1 }));
-                    }
-                }, 800);
-            };
-
-            if (finished) {
-                const totalPts = results.reduce((a, b) => a + b.pts, 0);
-                const perfect = results.every(r => r.correct);
-                return (
-                    <div className="flex-1 p-8 flex flex-col items-center justify-center">
-                        <div className="glass-panel rounded-3xl p-8 w-full text-center space-y-6">
-                            <h2 className="text-3xl font-black gold-text">修煉圓滿</h2>
-                            <div className="text-6xl font-black text-yellow-500">{totalPts}</div>
-                            <p className="text-slate-400">本次獲得修為</p>
-                            
-                            <div className="grid grid-cols-4 gap-2">
-                                {results.map((r, i) => (
-                                    <div key={i} className={`h-1 w-full rounded-full ${r.correct ? 'bg-yellow-500' : 'bg-red-500/30'}`}></div>
-                                ))}
-                            </div>
-
-                            {perfect && (
-                                <div className="bg-emerald-500/20 text-emerald-400 p-3 rounded-xl border border-emerald-500/30 text-sm animate-pulse">
-                                    完美通關！根骨提升
-                                </div>
-                            )}
-
-                            <button 
-                                onClick={() => setView('home')}
-                                className="w-full py-4 bg-yellow-500 text-slate-950 font-black rounded-xl hover:bg-yellow-400 active:scale-95 transition-all"
-                            >
-                                出關
-                            </button>
-                        </div>
-                    </div>
-                );
-            }
-
-            const currentWord = currentRoundWords[step];
-            if (!currentWord) return null;
-
-            return (
-                <div className="flex-1 p-6 flex flex-col">
-                    <div className="flex justify-between items-center mb-8">
-                        <button onClick={() => setView('home')} className="text-slate-500 hover:text-white">
-                            <i data-lucide="x-circle"></i>
-                        </button>
-                        <div className="flex-1 mx-8 h-2 bg-slate-900 rounded-full overflow-hidden">
-                            <div 
-                                className="h-full bg-yellow-500 transition-all"
-                                style={{ width: `${(step / currentRoundWords.length) * 100}%` }}
-                            ></div>
-                        </div>
-                        <div className="text-yellow-500 font-mono font-bold">{combo}連擊</div>
-                    </div>
-
-                    <div className="flex-1 flex flex-col items-center justify-center space-y-12 relative">
-                        {showFeedback && (
-                            <div className={`absolute top-0 text-7xl font-black italic animate-bounce z-20 ${showFeedback === 'S' ? 'rank-s' : 'text-yellow-400'}`}>
-                                {showFeedback}
-                            </div>
-                        )}
-
-                        <div className="text-center">
-                            <p className="text-slate-500 text-sm tracking-widest mb-2">請感悟真意</p>
-                            <h1 className="text-6xl font-black tracking-tight text-white">{currentWord.en}</h1>
-                        </div>
-
-                        <div className="w-full grid grid-cols-1 gap-4">
-                            {options.map((opt, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => handleAnswer(opt.id)}
-                                    className="glass-panel py-5 rounded-2xl text-xl font-bold hover:border-yellow-500/50 active:scale-95 transition-all"
-                                >
-                                    {opt.zh}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="py-8 text-center">
-                        <button onClick={() => {/* 暫存退出邏輯 */ setView('home')}} className="text-slate-600 text-sm underline">
-                            神魂暫退 (保存進度)
-                        </button>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- 組件: 嫁衣神功 (Rebirth) ---
-        const RebirthScreen = ({ profile, setProfile, setView }) => {
-            const canRebirth = profile.exp >= 5000; // 結丹期
-
-            const handleRebirth = () => {
-                if (!canRebirth) return;
-                if (confirm("散功重修，將使所有修為歸零，但永久獲得 50% 修為加成。確定嗎？")) {
-                    setProfile(prev => ({
-                        ...prev,
-                        exp: 0,
-                        rebirth: prev.rebirth + 1,
-                        spiritStones: prev.spiritStones + 1000
-                    }));
-                    setView('home');
-                }
-            };
-
-            return (
-                <div className="flex-1 p-8 flex flex-col items-center justify-center text-center">
-                    <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center text-red-500 mb-6 animate-pulse">
-                        <i data-lucide="flame" size={48}></i>
-                    </div>
-                    <h1 className="text-3xl font-black text-red-500 mb-4">嫁衣神功</h1>
-                    <p className="text-slate-400 mb-8 leading-relaxed">
-                        古神有云：欲成大果，必先斷骨。<br/>
-                        散盡一身修為，凝聚「轉世印記」。<br/>
-                        <span className="text-yellow-500">當前加成：+{profile.rebirth * 50}%</span>
-                    </p>
-
-                    <div className="glass-panel p-6 rounded-3xl w-full mb-8">
-                        <h3 className="font-bold mb-2">重修要求</h3>
-                        <p className={canRebirth ? "text-emerald-400" : "text-red-400"}>
-                            境界達到 結丹期 ({profile.exp}/5000)
-                        </p>
-                    </div>
-
-                    <button 
-                        disabled={!canRebirth}
-                        onClick={handleRebirth}
-                        className={`w-full py-4 rounded-xl font-black tracking-widest transition-all ${canRebirth ? 'bg-red-600 hover:bg-red-500 shimmer-btn' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
-                    >
-                        散功重修
-                    </button>
-                    
-                    <button onClick={() => setView('home')} className="mt-6 text-slate-500">罷了，我再想想</button>
-                </div>
-            );
-        };
-
-        // --- 組件: 管理後台 (Admin Panel) ---
-        const AdminPanel = ({ settings, setSettings, setView, words, setWords }) => {
-            const [pw, setPw] = useState("");
-            const [isAuthed, setIsAuthed] = useState(false);
-            const [newWord, setNewWord] = useState({ en: "", zh: "" });
-
-            const checkPw = () => {
-                if (pw === "123456") setIsAuthed(true);
-                else alert("密語錯誤！");
-            };
-
-            if (!isAuthed) {
-                return (
-                    <div className="flex-1 flex flex-col items-center justify-center p-8">
-                        <h2 className="text-2xl font-black gold-text mb-6">長輩控制台</h2>
-                        <input 
-                            type="password" 
-                            className="w-full p-4 glass-panel rounded-xl mb-4 text-center"
-                            placeholder="請輸入密語"
-                            value={pw}
-                            onChange={(e) => setPw(e.target.value)}
-                        />
-                        <button onClick={checkPw} className="w-full py-4 bg-yellow-500 text-slate-950 font-bold rounded-xl">驗證</button>
-                        <button onClick={() => setView('home')} className="mt-4 text-slate-500">返回</button>
-                    </div>
-                );
-            }
-
-            return (
-                <div className="flex-1 p-6 flex flex-col overflow-y-auto">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-black">法門調控</h2>
-                        <button onClick={() => setView('home')} className="text-slate-400 hover:text-white">關閉</button>
-                    </div>
-
-                    {/* 參數設定 */}
-                    <div className="glass-panel p-4 rounded-2xl mb-6 space-y-4">
-                        <h3 className="text-sm font-bold text-yellow-500 border-b border-yellow-500/20 pb-2 uppercase tracking-tighter">參數調整</h3>
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs">每日修煉輪次</span>
-                            <input 
-                                type="number" 
-                                className="w-16 bg-slate-900 border border-slate-700 rounded px-2 text-center"
-                                value={settings.dailyRounds}
-                                onChange={(e) => setSettings({...settings, dailyRounds: parseInt(e.target.value)})}
-                            />
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs">每輪單字數量</span>
-                            <input 
-                                type="number" 
-                                className="w-16 bg-slate-900 border border-slate-700 rounded px-2 text-center"
-                                value={settings.questionsPerRound}
-                                onChange={(e) => setSettings({...settings, questionsPerRound: parseInt(e.target.value)})}
-                            />
-                        </div>
-                    </div>
-
-                    {/* 字庫管理 */}
-                    <div className="glass-panel p-4 rounded-2xl mb-6">
-                        <h3 className="text-sm font-bold text-emerald-500 border-b border-emerald-500/20 pb-2 uppercase tracking-tighter mb-4">萬卷經書 ({words.length})</h3>
-                        <div className="flex space-x-2 mb-4">
-                            <input 
-                                type="text" placeholder="EN" 
-                                className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm"
-                                value={newWord.en}
-                                onChange={e => setNewWord({...newWord, en: e.target.value})}
-                            />
-                            <input 
-                                type="text" placeholder="中譯" 
-                                className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm"
-                                value={newWord.zh}
-                                onChange={e => setNewWord({...newWord, zh: e.target.value})}
-                            />
-                            <button 
-                                onClick={() => {
-                                    if (!newWord.en || !newWord.zh) return;
-                                    setWords([...words, { ...newWord, id: Date.now(), level: 1 }]);
-                                    setNewWord({ en: "", zh: "" });
-                                }}
-                                className="bg-emerald-600 px-3 py-1 rounded text-sm"
-                            >
-                                添
-                            </button>
-                        </div>
-
-                        <div className="h-64 overflow-y-auto space-y-2">
-                            {words.map(w => (
-                                <div key={w.id} className="flex justify-between items-center bg-slate-800/40 p-2 rounded text-xs">
-                                    <span>{w.en} - {w.zh}</span>
-                                    <button onClick={() => setWords(words.filter(x => x.id !== w.id))} className="text-red-500">刪</button>
-                                </div>
-                            ))}
-                        </div>
-
-                        <button 
-                            onClick={() => {
-                                if(confirm("確定要施展核彈級禁術，清空所有字庫嗎？")) setWords([]);
-                            }}
-                            className="w-full mt-4 py-2 border border-red-500/50 text-red-500 rounded text-xs hover:bg-red-500/10"
-                        >
-                            一鍵核彈級清空
-                        </button>
-                    </div>
-
-                    <div className="text-[10px] text-slate-600 text-center italic">
-                        版本：v1.0.4 | 踏天禁制模組
-                    </div>
-                </div>
-            );
-        };
-
-        // --- 渲染根節點 ---
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-
-        // --- PWA Service Worker 註冊 ---
-        if ('serviceWorker' in navigator) {
-            const manifest = document.getElementById('manifest').textContent;
-            const blob = new Blob([manifest], {type: 'application/json'});
-            const manifestURL = URL.createObjectURL(blob);
-            const link = document.createElement('link');
-            link.rel = 'manifest';
-            link.href = manifestURL;
-            document.head.appendChild(link);
-
-            // 簡易 SW 代碼
-            const swCode = `
-                self.addEventListener('install', (e) => {
-                    e.waitUntil(caches.open('xian-ni-v1').then((cache) => cache.addAll(['/'])));
-                });
-                self.addEventListener('fetch', (e) => {
-                    e.respondWith(caches.match(e.request).then((res) => res || fetch(e.request)));
-                });
-            `;
-            const swBlob = new Blob([swCode], {type: 'application/javascript'});
-            const swURL = URL.createObjectURL(swBlob);
-            navigator.serviceWorker.register(swURL);
-        }
-
-        // 初始化 Lucide 圖示
-        setTimeout(() => lucide.createIcons(), 1000);
     </script>
 </body>
 </html>
-
