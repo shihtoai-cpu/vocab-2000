@@ -533,9 +533,16 @@ if(finalErrs.length === 0) {
                 }
             };
 
-            const done = (ok) => {
-                user.stats.rounds++;
-                onUpdate(user);
+           const done = (ok) => {
+                // 採用展開運算子，建立全新的物件，確保觸發所有同步禁制
+                const updatedUser = {
+                    ...user,
+                    stats: {
+                        ...user.stats,
+                        rounds: user.stats.rounds + 1
+                    }
+                };
+                onUpdate(updatedUser);
                 if (ok) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                 setView('lobby');
             };
