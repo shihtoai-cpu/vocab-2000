@@ -3,74 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>天逆珠・仙逆單字傳 (雲端同步版)</title>
+    <title>天逆珠：仙逆單字傳</title>
     
     <!-- PWA 配置 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#020617">
     
-    <!-- 字體與圖示 -->
+    <!-- 外部資源 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
         :root {
-            --gold: #facc15;
-            --deep-slate: #020617;
-            --glass: rgba(15, 23, 42, 0.85);
+            --gold: #facc15; /* 高亮度金 */
+            --bg-dark: #020617;
+            --text-main: #f1f5f9;
         }
+
         body {
             font-family: 'Noto Serif TC', serif;
-            background-color: var(--deep-slate);
-            color: #f1f5f9;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
             margin: 0;
             overflow-x: hidden;
             user-select: none;
         }
+
         .font-calligraphy { font-family: 'Ma Shan Zheng', cursive; }
-        .glass-panel {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
+
+        /* 高對比按鈕 */
+        .btn-gold {
+            background-color: var(--gold);
+            color: #000000;
+            font-weight: 900;
+            border-radius: 0.75rem;
+            transition: all 0.2s;
+            box-shadow: 0 0 15px rgba(250, 204, 21, 0.4);
+        }
+        .btn-gold:active { transform: scale(0.95); filter: brightness(0.9); }
+
+        .btn-slate {
+            background-color: #1e293b;
+            color: #ffffff;
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+        }
+
+        /* 琉璃面板 */
+        .glass {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.8);
         }
-        .gold-text {
-            background: linear-gradient(135deg, #fef08a 0%, #ca8a04 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.5));
+
+        /* 修士魂碑列表 */
+        .tablet-item {
+            border-left: 5px solid var(--gold);
+            background: linear-gradient(90deg, rgba(250, 204, 21, 0.1) 0%, transparent 100%);
+            transition: all 0.3s;
         }
-        .soul-tablet {
-            border-left: 4px solid rgba(250, 204, 21, 0.2);
-            transition: all 0.3s ease;
-        }
-        .soul-tablet:hover {
-            border-left-color: var(--gold);
-            background: rgba(30, 41, 59, 0.6);
-            transform: translateX(5px);
-        }
-        .bead-bg {
+        .tablet-item:hover { background: rgba(250, 204, 21, 0.2); transform: translateX(5px); }
+
+        /* 旋轉天逆珠背景 */
+        .bead-effect {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 90vw;
-            height: 90vw;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 70%);
-            z-index: -1;
-            animation: rotate-bead 150s linear infinite;
+            top: 50%; left: 50%;
+            width: 100vw; height: 100vw;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+            z-index: -1; transform: translate(-50%, -50%);
+            animation: spin 180s linear infinite;
         }
-        @keyframes rotate-bead { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
-        .avatar-box { width: 160px; height: 160px; border-radius: 50%; overflow: hidden; border: 3px solid var(--gold); position: relative; }
-        .avatar-img { position: absolute; max-width: none; cursor: move; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        @keyframes spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        /* 進度條發光 */
+        .progress-glow {
+            box-shadow: 0 0 10px var(--gold);
+        }
     </style>
 </head>
 <body>
@@ -83,7 +96,6 @@
     <script type="text/babel">
         // ==========================================
         // 【仙界通道：Firebase 配置專區】
-        // 請填入您在 Firebase Console 申請的 API 密鑰
         // ==========================================
         const firebaseConfig = {
            apiKey: "AIzaSyAtvZjyKKRsfbbRPt-OI85isFuua6EV1YQ",
@@ -94,163 +106,129 @@
   appId: "1:459452518715:web:2842926df8a8d73831a71e"
         };
 
-        // 初始化 Firebase (若未填寫則僅運作於本地)
+        // 初始化 Firebase (失敗會降級到 Local 模式)
         let db = null;
         try {
-            if (firebaseConfig.apiKey.includes("請填入") === false) {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.firestore();
-                console.log("✅ 已成功連接仙界 (Firebase Connected)");
             }
-        } catch (e) {
-            console.warn("⚠️ 仙界通道未開啟，目前正處於凡間修煉模式 (Local Mode)");
-        }
+        } catch (e) { console.warn("Firebase Init Failed. Using LocalStorage."); }
 
         const { useState, useEffect, useRef, useMemo } = React;
 
         // ==========================================
-        // 1. 境界數據 (比照《仙逆》正統體系)
+        // 1. 境界數據體系 (比照仙逆)
         // ==========================================
-        const SUB_STAGES = ["初期", "中期", "後期", "後期巔峰", "圓滿"];
-        const QI_STAGES = Array.from({ length: 15 }, (_, i) => `${i + 1}層`);
-        const BASE_STAGES = ["初期", "中期", "後期", "後期巔峰", "圓滿", "假丹"];
-        const CORE_STAGES = ["初期", "中期", "後期", "後期巔峰", "圓滿", "假嬰"];
-
-        const REALM_MAP = [
+        const QI = Array.from({ length: 15 }, (_, i) => `凝氣期 ${i + 1} 層`);
+        const NORMAL = ["初期", "中期", "後期", "後期巔峰", "圓滿"];
+        
+        const REALMS = [
             { name: "凡人", stages: ["一介凡夫"], color: "text-slate-400" },
-            { name: "凝氣", stages: QI_STAGES, color: "text-emerald-400" },
-            { name: "築基", stages: BASE_STAGES, color: "text-blue-400" },
-            { name: "結丹", stages: CORE_STAGES, color: "text-purple-400" },
-            { name: "元嬰", stages: SUB_STAGES, color: "text-pink-400" },
-            { name: "化神", stages: SUB_STAGES, color: "text-orange-400" },
-            { name: "嬰變", stages: SUB_STAGES, color: "text-rose-500" },
-            { name: "問鼎", stages: SUB_STAGES, color: "text-amber-500" },
-            { name: "陰虛", stages: SUB_STAGES, color: "text-indigo-500" },
-            { name: "陽實", stages: SUB_STAGES, color: "text-yellow-500" },
-            { name: "窺涅", stages: SUB_STAGES, color: "text-cyan-400" },
-            { name: "淨涅", stages: SUB_STAGES, color: "text-sky-400" },
-            { name: "碎涅", stages: SUB_STAGES, color: "text-indigo-400" },
-            { name: "空涅", stages: SUB_STAGES, color: "text-blue-600" },
-            { name: "空靈", stages: SUB_STAGES, color: "text-purple-600" },
-            { name: "空玄", stages: SUB_STAGES, color: "text-rose-600" },
+            { name: "凝氣", stages: QI, color: "text-emerald-400" },
+            { name: "築基", stages: [...NORMAL, "假丹"], color: "text-blue-400" },
+            { name: "結丹", stages: [...NORMAL, "假嬰"], color: "text-purple-400" },
+            { name: "元嬰", stages: NORMAL, color: "text-pink-400" },
+            { name: "化神", stages: NORMAL, color: "text-orange-400" },
+            { name: "嬰變", stages: NORMAL, color: "text-rose-500" },
+            { name: "問鼎", stages: NORMAL, color: "text-amber-500" },
+            { name: "陰虛", stages: NORMAL, color: "text-indigo-500" },
+            { name: "陽實", stages: NORMAL, color: "text-yellow-500" },
+            { name: "窺涅", stages: NORMAL, color: "text-cyan-400" },
+            { name: "淨涅", stages: NORMAL, color: "text-sky-400" },
+            { name: "碎涅", stages: NORMAL, color: "text-indigo-400" },
+            { name: "空涅", stages: NORMAL, color: "text-blue-600" },
+            { name: "空靈", stages: NORMAL, color: "text-purple-600" },
+            { name: "空玄", stages: NORMAL, color: "text-rose-600" },
             { name: "空劫", stages: ["大尊初期", "大尊中期", "大尊後期", "金尊", "天尊", "躍天尊"], color: "text-red-700" },
             { name: "半步踏天", stages: ["第一橋", "第二橋", "第三橋", "第四橋", "第五橋", "第六橋", "第七橋", "第八橋"], color: "text-yellow-500" },
-            { name: "踏天境", stages: ["第九橋(永恆)"], color: "text-yellow-200 font-black" }
+            { name: "踏天境", stages: ["第九橋(永恆)"], color: "text-yellow-200" }
         ];
 
-        const ALL_SUB_REALMS = REALM_MAP.flatMap(r => r.stages.map(s => ({ realm: r.name, sub: s, color: r.color })));
+        const ALL_STAGES = REALMS.flatMap(r => r.stages.map(s => ({ name: r.name, sub: s, color: r.color })));
 
-        // ==========================================
-        // 2. 智慧分類與經驗邏輯
-        // ==========================================
-        const guessCategory = (zh) => {
-            const keywords = {
-                "動作": ["走", "看", "聽", "說", "跑", "跳", "打", "取", "動", "修"],
-                "情緒": ["喜", "怒", "哀", "樂", "悲", "驚", "憂", "恐", "愛", "恨"],
-                "天氣": ["風", "雨", "雷", "電", "雲", "霧", "雪", "晴", "陰", "氣"],
-                "金融": ["錢", "金", "幣", "買", "賣", "寶", "費", "財", "稅"],
-                "物品": ["桌", "椅", "筆", "書", "劍", "器", "具", "物", "丹"],
-                "動物": ["虎", "狼", "龍", "鳳", "鳥", "獸", "馬", "羊", "犬"],
-                "植物": ["花", "草", "樹", "林", "木", "葉", "果", "藥"]
-            };
-            for (let cat in keywords) { if (keywords[cat].some(k => zh.includes(k))) return cat; }
-            return "其他類別";
+        // 升級積分計算：越高階越難 (指數級)
+        const getNextExp = (idx) => {
+            if (idx < 15) return 50 + idx * 20; // 凝氣期很快
+            return Math.floor(200 * Math.pow(1.18, idx - 14) + 20 * Math.pow(idx, 2));
         };
 
-        const getExpForLevel = (idx) => {
-            if (idx < 15) return 100 + idx * 20; 
-            return Math.floor(200 * Math.pow(1.15, idx - 14) + 10 * Math.pow(idx, 2.2));
-        };
-
-        const getRealmInfo = (exp) => {
+        const getRealmByExp = (exp) => {
             let total = 0;
-            for (let i = 0; i < ALL_SUB_REALMS.length; i++) {
-                const req = getExpForLevel(i);
-                if (exp < total + req) return { ...ALL_SUB_REALMS[i], index: i, next: total + req, start: total };
+            for (let i = 0; i < ALL_STAGES.length; i++) {
+                const req = getNextExp(i);
+                if (exp < total + req) return { ...ALL_STAGES[i], idx: i, current: total, next: total + req };
                 total += req;
             }
-            return { ...ALL_SUB_REALMS[ALL_SUB_REALMS.length - 1], index: ALL_SUB_REALMS.length - 1, next: Infinity, start: total };
+            return { ...ALL_STAGES[ALL_STAGES.length - 1], idx: ALL_STAGES.length - 1, current: total, next: Infinity };
         };
 
         // ==========================================
-        // 3. 主應用程式 (整合 Cloud Sync)
+        // 2. 智慧分類功能
+        // ==========================================
+        const guessCat = (zh) => {
+            const map = {
+                "動作": ["跑", "跳", "走", "看", "說", "打", "取", "動", "修"],
+                "情緒": ["怒", "喜", "憂", "傷", "愛", "恨", "驚", "恐"],
+                "天氣": ["風", "雨", "雷", "電", "雲", "雪", "晴", "氣"],
+                "物品": ["桌", "椅", "筆", "劍", "器", "具", "服", "物"],
+                "植物": ["花", "草", "樹", "林", "木", "葉", "藥"],
+                "稱謂": ["師", "兄", "弟", "父", "母", "尊", "王", "人"]
+            };
+            for (let k in map) { if (map[k].some(x => zh.includes(x))) return k; }
+            return "其他";
+        };
+
+        // ==========================================
+        // 3. 主應用核心
         // ==========================================
         const App = () => {
-            const [view, setView] = useState('gate'); 
+            const [view, setView] = useState('hall'); // hall, register, dashboard, trial, training, admin
             const [users, setUsers] = useState([]);
             const [currentUser, setCurrentUser] = useState(null);
             const [words, setWords] = useState([]);
             const [batches, setBatches] = useState([]);
             const [settings, setSettings] = useState({
-                maxRounds: 3, qPerRound: 10, maxErrRes: 3, adminPw: "123456"
+                maxRounds: 3, qPerRound: 10, maxErrors: 3, adminPw: "123456"
             });
 
-            // 初始加載：先從本地拿，再嘗試連雲端
+            // 初始讀取 (LocalStorage)
             useEffect(() => {
-                const localUsers = JSON.parse(localStorage.getItem('sn_users') || '[]');
-                const localWords = JSON.parse(localStorage.getItem('sn_words') || '[]');
-                const localBatches = JSON.parse(localStorage.getItem('sn_batches') || '[]');
-                const localSettings = JSON.parse(localStorage.getItem('sn_settings') || '{}');
-
-                setUsers(localUsers);
-                setWords(localWords);
-                setBatches(localBatches);
-                if(localSettings.adminPw) setSettings(localSettings);
-
-                // 雲端同步：獲取最新的修士名單與單字
-                if (db) {
-                    db.collection("global").doc("data").onSnapshot(doc => {
-                        if (doc.exists) {
-                            const data = doc.data();
-                            if(data.words) setWords(data.words);
-                            if(data.batches) setBatches(data.batches);
-                            if(data.settings) setSettings(data.settings);
-                        }
-                    });
-                    db.collection("users").onSnapshot(snap => {
-                        const cloudUsers = snap.docs.map(d => d.data());
-                        if(cloudUsers.length > 0) setUsers(cloudUsers);
-                    });
-                }
+                const localData = {
+                    users: JSON.parse(localStorage.getItem('xni_users') || '[]'),
+                    words: JSON.parse(localStorage.getItem('xni_words') || '[]'),
+                    batches: JSON.parse(localStorage.getItem('xni_batches') || '[]'),
+                    settings: JSON.parse(localStorage.getItem('xni_settings') || 'null')
+                };
+                if (localData.users) setUsers(localData.users);
+                if (localData.words) setWords(localData.words);
+                if (localData.batches) setBatches(localData.batches);
+                if (localData.settings) setSettings(localData.settings);
             }, []);
 
-            // 資料同步：本地備份 + 雲端更新
-            const syncData = (newUsers, newWords, newBatches, newSettings) => {
-                if(newUsers) { setUsers(newUsers); localStorage.setItem('sn_users', JSON.stringify(newUsers)); }
-                if(newWords) { setWords(newWords); localStorage.setItem('sn_words', JSON.stringify(newWords)); }
-                if(newBatches) { setBatches(newBatches); localStorage.setItem('sn_batches', JSON.stringify(newBatches)); }
-                if(newSettings) { setSettings(newSettings); localStorage.setItem('sn_settings', JSON.stringify(newSettings)); }
-
-                if (db) {
-                    if(newWords || newBatches || newSettings) {
-                        db.collection("global").doc("data").set({
-                            words: newWords || words,
-                            batches: newBatches || batches,
-                            settings: newSettings || settings
-                        }, { merge: true });
-                    }
-                    if(newUsers) {
-                        newUsers.forEach(u => db.collection("users").doc(u.name).set(u));
-                    }
-                }
+            // 數據儲存輔助
+            const saveData = (u, w, b, s) => {
+                if (u) { setUsers(u); localStorage.setItem('xni_users', JSON.stringify(u)); }
+                if (w) { setWords(w); localStorage.setItem('xni_words', JSON.stringify(w)); }
+                if (b) { setBatches(b); localStorage.setItem('xni_batches', JSON.stringify(b)); }
+                if (s) { setSettings(s); localStorage.setItem('xni_settings', JSON.stringify(s)); }
             };
 
-            // 視圖切換邏輯
             const renderContent = () => {
                 switch(view) {
-                    case 'gate': return <HallOfSoul tablets={users} setView={setView} setLoginUser={setCurrentUser} />;
-                    case 'register': return <Registration setView={setView} addUser={(u) => syncData([...users, u])} />;
-                    case 'home': return <Home user={currentUser} settings={settings} setView={setView} setUser={setCurrentUser} onUpdate={(u) => syncData(users.map(x => x.name === u.name ? u : x))} />;
-                    case 'battle': return <TrialView words={words} settings={settings} user={currentUser} setUser={setCurrentUser} setView={setView} onUpdate={(u) => syncData(users.map(x => x.name === u.name ? u : x))} />;
-                    case 'training': return <Training words={words} user={currentUser} setView={setView} />;
-                    case 'admin': return <AdminPanel settings={settings} setSettings={(s)=>syncData(null,null,null,s)} words={words} setWords={(w)=>syncData(null,w,null,null)} batches={batches} setBatches={(b)=>syncData(null,null,b,null)} setView={setView} users={users} setUsers={(u)=>syncData(u)} />;
-                    default: return <div>加載中...</div>;
+                    case 'hall': return <Hall users={users} setView={setView} onLogin={(u) => { setCurrentUser(u); setView('dashboard'); }} />;
+                    case 'register': return <Register onBack={() => setView('hall')} onDone={(u) => { saveData([...users, u]); setView('hall'); }} />;
+                    case 'dashboard': return <Dashboard user={currentUser} settings={settings} setView={setView} words={words} onLogout={() => { setCurrentUser(null); setView('hall'); }} onUpdate={(u) => saveData(users.map(x => x.name === u.name ? u : x))} />;
+                    case 'trial': return <Trial words={words} settings={settings} user={currentUser} setView={setView} onUpdate={(u) => saveData(users.map(x => x.name === u.name ? u : x))} />;
+                    case 'training': return <Training words={words} user={currentUser} setView={setView} onUpdate={(u) => saveData(users.map(x => x.name === u.name ? u : x))} />;
+                    case 'admin': return <AdminPanel settings={settings} setSettings={(s) => saveData(null,null,null,s)} words={words} setWords={(w) => saveData(null,w,null,null)} batches={batches} setBatches={(b) => saveData(null,null,b,null)} users={users} setUsers={(u)=>saveData(u)} setView={setView} />;
+                    default: return <div className="p-10 text-center">正在神遊中...</div>;
                 }
             };
 
             return (
                 <div className="relative min-h-screen">
-                    <div className="bead-bg"></div>
+                    <div className="bead-effect"></div>
                     <div className="relative z-10 max-w-md mx-auto min-h-screen flex flex-col">
                         {renderContent()}
                     </div>
@@ -259,58 +237,60 @@
         };
 
         // ==========================================
-        // 4. 子組件：仙魂碑 (Hall of Soul)
+        // 4. 子組件：修士魂碑大廳 (初始頁面)
         // ==========================================
-        const HallOfSoul = ({ tablets, setView, setLoginUser }) => {
-            const [pwIn, setPwIn] = useState("");
+        const Hall = ({ users, setView, onLogin }) => {
             const [target, setTarget] = useState(null);
+            const [pw, setPw] = useState("");
 
-            const login = () => {
-                if (pwIn === target.pw) {
-                    const today = new Date().toDateString();
-                    if (target.stats.lastDate !== today) {
-                        target.stats = { ...target.stats, lastDate: today, rounds: 0, spiritCount: 0 };
-                    }
-                    setLoginUser(target);
-                    setView('home');
-                } else { alert("神識不匹配！"); }
+            const handleLogin = () => {
+                if (pw === target.pw) {
+                    onLogin(target);
+                } else {
+                    alert("密語有誤，神魂無法契合！");
+                }
             };
 
             return (
-                <div className="flex-1 p-6 flex flex-col">
-                    <div className="text-center py-10">
-                        <h1 className="text-5xl font-calligraphy gold-text">仙魂碑</h1>
-                        <p className="text-slate-500 text-xs tracking-widest mt-2">喚醒沉睡的神識進修</p>
-                    </div>
-                    <div className="flex-1 overflow-y-auto space-y-4">
-                        {tablets.map((u, i) => {
-                            const realm = getRealmInfo(u.exp);
+                <div className="p-6 flex flex-col h-screen">
+                    <header className="text-center py-10 space-y-2">
+                        <h1 className="text-5xl font-calligraphy gold-text">仙魂碑大廳</h1>
+                        <p className="text-slate-500 text-xs tracking-[0.4em]">點擊魂碑，喚醒神識</p>
+                    </header>
+
+                    <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                        {users.map((u, i) => {
+                            const realm = getRealmByExp(u.exp);
                             return (
-                                <div key={i} onClick={() => setTarget(u)} className="soul-tablet glass-panel p-4 rounded-2xl flex items-center space-x-4 cursor-pointer">
+                                <div key={i} onClick={() => { setTarget(u); setPw(""); }} className="tablet-item glass p-4 rounded-xl cursor-pointer flex items-center space-x-4">
                                     <div className="w-12 h-12 rounded-full overflow-hidden border border-yellow-500/30">
-                                        <img src={u.avatar.src} className="max-w-none" style={{ transform: `translate(${u.avatar.pos.x/3}px, ${u.avatar.pos.y/3}px) scale(${u.avatar.pos.scale/3})` }} />
+                                        <img src={u.avatar} className="w-full h-full object-cover" />
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="font-bold">{u.name}</h3>
-                                        <p className={`text-[10px] font-black uppercase ${realm.color}`}>{realm.realm} - {realm.sub}</p>
+                                        <div className="flex justify-between">
+                                            <h3 className="font-bold text-lg">{u.name}</h3>
+                                            <span className="text-xs text-slate-500 font-mono">積分: {u.exp}</span>
+                                        </div>
+                                        <p className={`text-[11px] font-black uppercase ${realm.color}`}>{realm.name}・{realm.sub}</p>
                                     </div>
-                                    <span className="text-[10px] text-slate-500">Exp: {u.exp}</span>
                                 </div>
                             );
                         })}
-                        <button onClick={() => setView('register')} className="w-full py-6 border-2 border-dashed border-slate-700 rounded-2xl flex flex-col items-center justify-center text-slate-500 hover:text-yellow-500 transition-all">
-                            <i data-lucide="user-plus" className="mb-1"></i>
-                            <span className="text-xs">踏入山門 (註冊修士)</span>
+
+                        <button onClick={() => setView('register')} className="w-full py-6 border-2 border-dashed border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-500 hover:text-yellow-500 transition-all">
+                            <i data-lucide="user-plus" className="mb-2"></i>
+                            <span className="text-xs font-bold uppercase">註冊新修士</span>
                         </button>
                     </div>
+
                     {target && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80">
-                            <div className="glass-panel w-full max-w-xs p-8 rounded-3xl text-center space-y-6">
-                                <h3 className="text-xl font-bold">喚醒 {target.name}</h3>
-                                <input type="password" placeholder="輸入神識密語" className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl text-center" value={pwIn} onChange={e => setPwIn(e.target.value)} autoFocus />
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+                            <div className="glass w-full max-w-xs p-8 rounded-3xl text-center space-y-6 animate-in zoom-in">
+                                <h3 className="text-xl font-bold">喚醒 {target.name} 的神識</h3>
+                                <input type="password" placeholder="輸入神識密語" className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl text-center focus:border-yellow-500 outline-none" value={pw} onChange={e => setPw(e.target.value)} autoFocus onKeyUp={e => e.key === 'Enter' && handleLogin()} />
                                 <div className="flex space-x-2">
-                                    <button onClick={() => setTarget(null)} className="flex-1 text-slate-500 text-xs">取消</button>
-                                    <button onClick={login} className="flex-1 py-3 bg-yellow-600 rounded-xl font-bold text-slate-950">確認</button>
+                                    <button onClick={() => setTarget(null)} className="flex-1 py-3 text-slate-500 text-sm">取消</button>
+                                    <button onClick={handleLogin} className="flex-2 btn-gold p-3 px-8">確認進入</button>
                                 </div>
                             </div>
                         </div>
@@ -320,184 +300,252 @@
         };
 
         // ==========================================
-        // 5. 子組件：修士註冊 (Registration)
+        // 5. 子組件：註冊修士
         // ==========================================
-        const Registration = ({ setView, addUser }) => {
-            const [name, setName] = useState("");
-            const [pw, setPw] = useState("");
-            const [imgSrc, setImgSrc] = useState(null);
-            const [imgPos, setImgPos] = useState({ x: 0, y: 0, scale: 1 });
-            const dragging = useRef(false);
-            const lastPos = useRef({ x: 0, y: 0 });
+        const Register = ({ onBack, onDone }) => {
+            const [form, setForm] = useState({ name: "", pw: "", avatar: "" });
 
             const handleFile = (e) => {
                 const file = e.target.files[0];
                 if (file) {
                     const reader = new FileReader();
-                    reader.onload = (ev) => { setImgSrc(ev.target.result); setImgPos({x:0, y:0, scale:1}); };
+                    reader.onload = (ev) => setForm({ ...form, avatar: ev.target.result });
                     reader.readAsDataURL(file);
                 }
             };
 
-            const handleMove = (e) => {
-                if (!dragging.current) return;
-                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-                setImgPos(p => ({ ...p, x: p.x + (clientX - lastPos.current.x), y: p.y + (clientY - lastPos.current.y) }));
-                lastPos.current = { x: clientX, y: clientY };
-            };
-
             const submit = () => {
-                if (!name || !pw || !imgSrc) return alert("資料不全！");
-                addUser({
-                    name, pw, exp: 0, avatar: { src: imgSrc, pos: imgPos },
-                    stats: { rounds: 0, spiritCount: 0, lastDate: new Date().toDateString() }
+                if (!form.name || !form.pw || !form.avatar) return alert("姓名、密碼與頭像缺一不可！");
+                onDone({
+                    ...form,
+                    exp: 0,
+                    stats: { rounds: 0, lastDate: new Date().toDateString(), spiritCount: 0 }
                 });
-                setView('gate');
             };
 
             return (
-                <div className="flex-1 p-8 flex flex-col items-center justify-center space-y-8">
+                <div className="p-8 flex flex-col items-center justify-center min-h-screen space-y-8">
                     <h2 className="text-3xl font-calligraphy gold-text">初登仙冊</h2>
-                    <div className="avatar-box" onMouseDown={e => { dragging.current=true; lastPos.current={x:e.clientX, y:e.clientY}; }} onMouseMove={handleMove} onMouseUp={()=>dragging.current=false} onTouchStart={e=>{ dragging.current=true; lastPos.current={x:e.touches[0].clientX, y:e.touches[0].clientY}; }} onTouchMove={handleMove} onTouchEnd={()=>dragging.current=false}>
-                        {imgSrc ? <img src={imgSrc} className="avatar-img" style={{ transform: `translate(${imgPos.x}px, ${imgPos.y}px) scale(${imgPos.scale})` }} draggable="false" /> : <div className="w-full h-full flex items-center justify-center text-slate-700 text-xs">上傳顯像</div>}
-                    </div>
-                    <div className="flex space-x-2">
+                    <div className="relative group">
+                        <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-yellow-500 shadow-xl bg-slate-800">
+                            {form.avatar ? <img src={form.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">頭像</div>}
+                        </div>
                         <input type="file" id="up" hidden onChange={handleFile} accept="image/*" />
-                        <label htmlFor="up" className="px-4 py-2 glass-panel rounded-full text-[10px] cursor-pointer">上傳</label>
-                        <button onClick={() => setImgPos(p => ({...p, scale: p.scale + 0.1}))} className="w-8 h-8 glass-panel rounded-full">+</button>
-                        <button onClick={() => setImgPos(p => ({...p, scale: Math.max(0.1, p.scale - 0.1)}))} className="w-8 h-8 glass-panel rounded-full">-</button>
+                        <label htmlFor="up" className="absolute bottom-0 right-0 p-2 btn-gold rounded-full cursor-pointer"><i data-lucide="camera" size={16}></i></label>
                     </div>
+
                     <div className="w-full space-y-4">
-                        <input type="text" placeholder="修士道號" className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl text-center" value={name} onChange={e => setName(e.target.value)} />
-                        <input type="password" placeholder="神識密語" className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl text-center" value={pw} onChange={e => setPw(e.target.value)} />
+                        <input type="text" placeholder="修士名號" className="w-full bg-slate-900 p-4 rounded-xl border border-white/5 outline-none focus:border-yellow-500" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+                        <input type="password" placeholder="神識密語" className="w-full bg-slate-900 p-4 rounded-xl border border-white/5 outline-none focus:border-yellow-500" value={form.pw} onChange={e => setForm({...form, pw: e.target.value})} />
                     </div>
-                    <div className="flex space-x-4 w-full">
-                        <button onClick={()=>setView('gate')} className="flex-1 text-slate-500">返回</button>
-                        <button onClick={submit} className="flex-2 py-4 bg-yellow-600 rounded-xl font-bold text-slate-950 px-8">確認入冊</button>
+
+                    <div className="w-full flex space-x-4">
+                        <button onClick={onBack} className="flex-1 btn-slate p-4">返回</button>
+                        <button onClick={submit} className="flex-2 btn-gold p-4">烙印名號</button>
                     </div>
                 </div>
             );
         };
 
         // ==========================================
-        // 6. 子組件：主界面 (Home)
+        // 6. 子組件：修士洞府 (主畫面)
         // ==========================================
-        const Home = ({ user, settings, setView, setUser, onUpdate }) => {
-            const realm = getRealmInfo(user.exp);
-            const progress = ((user.exp - realm.start) / (realm.next - realm.start)) * 100;
+        const Dashboard = ({ user, settings, setView, words, onLogout, onUpdate }) => {
+            const realm = getRealmByExp(user.exp);
+            const nextLvlPoints = realm.next - realm.current;
+            const currentPointsInLvl = user.exp - realm.current;
+            const progress = (currentPointsInLvl / nextLvlPoints) * 100;
+
+            // 每日重置
+            useEffect(() => {
+                const today = new Date().toDateString();
+                if (user.stats.lastDate !== today) {
+                    user.stats.rounds = 0;
+                    user.stats.spiritCount = 0;
+                    user.stats.lastDate = today;
+                    onUpdate(user);
+                }
+            }, []);
 
             return (
-                <div className="flex-1 p-6 flex flex-col space-y-6">
-                    <div className="flex justify-between items-center mt-4">
+                <div className="p-6 flex flex-col space-y-6 pb-24">
+                    <header className="flex justify-between items-center mt-4">
                         <div className="flex items-center space-x-3">
-                            <div className="w-14 h-14 rounded-full border-2 border-yellow-500 overflow-hidden relative">
-                                <img src={user.avatar.src} className="absolute max-w-none" style={{ transform: `translate(${user.avatar.pos.x/3}px, ${user.avatar.pos.y/3}px) scale(${user.avatar.pos.scale/3})` }} />
-                            </div>
+                            <img src={user.avatar} className="w-14 h-14 rounded-full border-2 border-yellow-500 object-cover" />
                             <div>
                                 <h2 className="text-xl font-bold">{user.name}</h2>
-                                <p className={`text-[10px] font-black ${realm.color}`}>{realm.realm} - {realm.sub}</p>
+                                <p className={`text-[11px] font-black uppercase ${realm.color}`}>{realm.name}・{realm.sub}</p>
                             </div>
                         </div>
-                        <button onClick={() => setView('admin')} className="p-3 glass-panel rounded-full text-slate-400"><i data-lucide="settings"></i></button>
-                    </div>
-                    <div className="glass-panel p-6 rounded-3xl space-y-4">
-                        <div className="flex justify-between text-[10px] text-slate-500 uppercase tracking-widest">
-                            <span>修為進度</span>
-                            <span>{user.exp.toLocaleString()} / {realm.next.toLocaleString()}</span>
+                        <button onClick={() => setView('admin')} className="p-3 glass rounded-full text-yellow-500 border border-yellow-500/20"><i data-lucide="shield-check"></i></button>
+                    </header>
+
+                    {/* 修煉進度 */}
+                    <div className="glass p-6 rounded-2xl space-y-4">
+                        <div className="flex justify-between items-end">
+                            <span className="text-[10px] text-slate-500 uppercase tracking-widest">當前修為</span>
+                            <span className="text-xs font-mono text-yellow-500">{user.exp.toLocaleString()} / {realm.next.toLocaleString()}</span>
                         </div>
-                        <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-white/5">
-                            <div className="h-full bg-gradient-to-r from-yellow-700 via-yellow-400 to-yellow-600 rounded-full" style={{ width: `${progress}%` }}></div>
+                        <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-white/5">
+                            <div className="h-full bg-gradient-to-r from-yellow-700 to-yellow-400 rounded-full progress-glow transition-all duration-1000" style={{ width: `${progress}%` }}></div>
+                        </div>
+                        <p className="text-[10px] text-center text-slate-500">距離突破至下一個境界還需 {realm.next - user.exp} 積分</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="glass p-4 rounded-xl text-center">
+                            <p className="text-[10px] text-slate-500 uppercase">今日試煉</p>
+                            <p className="text-xl font-black text-emerald-400">{user.stats.rounds} / {settings.maxRounds}</p>
+                        </div>
+                        <div className="glass p-4 rounded-xl text-center">
+                            <p className="text-[10px] text-slate-500 uppercase">時光屋累積</p>
+                            <p className="text-xl font-black text-blue-400">{user.stats.spiritCount} 題</p>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                        <div className="glass-panel p-4 rounded-2xl"><p className="text-[10px] text-slate-500">今日試煉</p><p className="text-xl font-bold text-emerald-400">{user.stats.rounds} / {settings.maxRounds}</p></div>
-                        <div className="glass-panel p-4 rounded-2xl"><p className="text-[10px] text-slate-500">天逆空間</p><p className="text-xl font-bold text-blue-400">{user.stats.spiritCount} / 30</p></div>
-                    </div>
-                    <div className="space-y-4 flex-1">
-                        <button onClick={() => setView('battle')} className="w-full h-24 glass-panel rounded-3xl flex items-center justify-between px-8 hover:border-yellow-500/50 transition-all group">
-                            <h3 className="text-xl font-bold gold-text">三輪試煉</h3>
-                            <div className="w-12 h-12 bg-yellow-500/10 rounded-full flex items-center justify-center text-yellow-500 group-hover:scale-110 transition-transform"><i data-lucide="sword"></i></div>
+
+                    <div className="space-y-4">
+                        <button onClick={() => setView('trial')} className="w-full h-24 glass rounded-3xl flex items-center justify-between px-8 border-yellow-500/20 hover:border-yellow-500/50 transition-all group">
+                            <div>
+                                <h3 className="text-xl font-bold gold-text">三輪試煉</h3>
+                                <p className="text-[10px] text-slate-500">每日突破，可獲得大量積分</p>
+                            </div>
+                            <div className="w-12 h-12 btn-gold rounded-full flex items-center justify-center text-black"><i data-lucide="sword"></i></div>
                         </button>
-                        <button onClick={() => setView('training')} className="w-full h-24 glass-panel rounded-3xl flex items-center justify-between px-8 hover:border-blue-500/50 transition-all group">
-                            <h3 className="text-xl font-bold text-blue-400">天逆空間</h3>
-                            <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform"><i data-lucide="zap"></i></div>
+
+                        <button onClick={() => setView('training')} className="w-full h-24 glass rounded-3xl flex items-center justify-between px-8 border-blue-500/20 hover:border-blue-500/50 transition-all group">
+                            <div>
+                                <h3 className="text-xl font-bold text-blue-400">天逆空間</h3>
+                                <p className="text-[10px] text-slate-500">不計分修煉，隨時磨練神識</p>
+                            </div>
+                            <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-black"><i data-lucide="zap"></i></div>
                         </button>
                     </div>
-                    <button onClick={() => { setView('gate'); setUser(null); }} className="w-full py-4 text-slate-600 text-[10px] tracking-widest uppercase">神魂離體 (登出)</button>
+
+                    <button onClick={onLogout} className="text-slate-600 text-xs tracking-widest mt-4">神魂離體 (登出)</button>
                 </div>
             );
         };
 
         // ==========================================
-        // 7. 子組件：三輪試煉 (TrialView)
+        // 7. 子組件：三輪試煉 (Trial)
         // ==========================================
-        const TrialView = ({ words, settings, user, setUser, setView, onUpdate }) => {
+        const Trial = ({ words, settings, user, setView, onUpdate }) => {
             const [round, setRound] = useState(1);
             const [step, setStep] = useState(0);
             const [qList, setQList] = useState([]);
-            const [wrongs, setWrongs] = useState([]);
-            const [resMode, setResMode] = useState(false);
-            const [mode, setMode] = useState('choice');
+            const [errors, setErrors] = useState([]);
+            const [isRes, setIsRes] = useState(false);
+            const [mode, setMode] = useState('choice'); // choice, spell
             const [spellIn, setSpellIn] = useState("");
-            const [fb, setFb] = useState(null);
+            const [showFb, setShowFb] = useState(null);
 
             useEffect(() => {
-                if (words.length < 10) { alert("單字不足！"); return setView('home'); }
-                if (user.stats.rounds >= settings.maxRounds) { alert("今日次數已滿！"); return setView('home'); }
-                initRound();
+                if (words.length < 10) { alert("仙冊不足 10 個單字！"); return setView('dashboard'); }
+                if (user.stats.rounds >= settings.maxRounds) { alert("今日次數已達上限！"); return setView('dashboard'); }
+                startRound();
             }, []);
 
-            const initRound = () => {
+            const startRound = () => {
                 const picked = [...words].sort(() => 0.5 - Math.random()).slice(0, settings.qPerRound);
-                setQList(picked); setStep(0); setWrongs([]); setResMode(false); setMode(Math.random() > 0.5 ? 'choice' : 'spell');
+                setQList(picked); setStep(0); setErrors([]); setIsRes(false);
+                setMode(Math.random() > 0.5 ? 'choice' : 'spell');
             };
 
-            const handleAns = (isCorrect) => {
-                if (fb) return;
-                if (isCorrect) {
-                    setFb('ok');
+            const handleAns = (isOk) => {
+                if (showFb) return;
+                if (isOk) {
+                    setShowFb('ok');
                     user.exp += 15;
                 } else {
-                    setFb('no');
-                    setWrongs(p => [...p, qList[step]]);
+                    setShowFb('no');
+                    setErrors(p => [...p, qList[step]]);
                 }
+
                 setTimeout(() => {
-                    setFb(null); setSpellIn("");
-                    if (step + 1 < qList.length) setStep(step + 1);
-                    else handleRoundEnd();
+                    setShowFb(null); setSpellIn("");
+                    if (step + 1 < qList.length) { setStep(step + 1); }
+                    else { handleRoundEnd(); }
                 }, 600);
             };
 
             const handleRoundEnd = () => {
-                const errCount = wrongs.length + (fb === 'no' ? 1 : 0);
+                const errCount = errors.length + (showFb === 'no' ? 1 : 0);
                 if (errCount === 0) {
-                    if (round < settings.maxRounds) { alert("圓滿！進入下一輪"); setRound(round+1); initRound(); }
-                    else { finish(true); }
-                } else if (errCount <= settings.maxErrRes) {
-                    alert("復活重生啟動！"); setResMode(true); setQList([...wrongs]); setWrongs([]); setStep(0); setMode('spell');
-                } else { alert("失敗！"); finish(false); }
+                    if (round < settings.maxRounds) {
+                        alert("通關成功，進入下一輪！"); setRound(round + 1); startRound();
+                    } else { finish(true); }
+                } else if (errCount <= settings.maxErrors && !isRes) {
+                    alert("敗部復活重生！需拼寫對所有錯誤單字。");
+                    setIsRes(true); setQList([...errors]); setErrors([]); setStep(0); setMode('spell');
+                } else {
+                    alert("道心受損，試煉失敗！"); finish(false);
+                }
             };
 
             const finish = (ok) => {
-                user.stats.rounds += 1;
-                onUpdate(user);
-                if (ok) confetti();
-                setView('home');
+                user.stats.rounds += 1; onUpdate(user); setView('dashboard');
             };
 
             const cur = qList[step];
             if (!cur) return null;
 
             return (
-                <div className="flex-1 p-6 flex flex-col">
-                    <div className="flex justify-between items-center mb-8"><span className="text-xs text-slate-500">輪 {round} - 進度 {step+1}/{qList.length}</span>{resMode && <span className="bg-red-500/20 text-red-500 text-[10px] px-2 py-1 rounded">復活中</span>}</div>
+                <div className="p-6 flex flex-col min-h-screen">
+                    <header className="flex justify-between items-center mb-8">
+                        <span className="text-xs text-slate-500 font-bold uppercase tracking-tighter">輪 {round} - 進度 {step+1}/{qList.length}</span>
+                        {isRes && <span className="bg-red-500 px-2 py-1 rounded text-[10px] font-black uppercase">復活中</span>}
+                    </header>
                     <div className="flex-1 flex flex-col items-center justify-center space-y-12">
-                        <div className="text-center space-y-2"><p className="text-slate-500 text-xs">{cur.category}</p><h2 className="text-5xl font-bold tracking-tight">{mode === 'choice' ? cur.en : cur.zh}</h2></div>
+                        <div className="text-center space-y-2">
+                            <p className="text-slate-500 text-xs font-bold uppercase">{cur.cat || "修煉"}</p>
+                            <h2 className="text-5xl font-bold tracking-tighter">{mode === 'choice' ? cur.en : cur.zh}</h2>
+                        </div>
                         {mode === 'choice' ? (
-                            <div className="w-full space-y-3">{words.slice(0, 3).concat(cur).sort(()=>0.5-Math.random()).map((o,i)=>(<button key={i} onClick={()=>handleAns(o.en===cur.en)} className={`w-full py-4 glass-panel rounded-2xl border-2 transition-all ${fb && o.en===cur.en?'border-emerald-500':'border-transparent'}`}>{o.zh}</button>))}</div>
+                            <div className="w-full grid gap-4">
+                                {words.slice(0, 3).concat(cur).sort(() => 0.5 - Math.random()).map((o, i) => (
+                                    <button key={i} onClick={() => handleAns(o.en === cur.en)} className={`w-full py-5 glass rounded-2xl font-bold transition-all border-2 ${showFb && o.en === cur.en ? 'border-emerald-500' : 'border-transparent'}`}>{o.zh}</button>
+                                ))}
+                            </div>
                         ) : (
-                            <input autoFocus className="w-full bg-transparent border-b-2 border-slate-700 text-4xl text-center outline-none focus:border-yellow-500 p-2" value={spellIn} onChange={e=>{setSpellIn(e.target.value);if(e.target.value.toLowerCase()===cur.en.toLowerCase())handleAns(true);}} />
+                            <input autoFocus className="w-full bg-transparent border-b-4 border-slate-700 text-4xl text-center outline-none focus:border-yellow-500 transition-all" value={spellIn} onChange={e => { setSpellIn(e.target.value); if(e.target.value.toLowerCase() === cur.en.toLowerCase()) handleAns(true); }} />
+                        )}
+                    </div>
+                    {showFb && <div className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-8xl font-black ${showFb==='ok'?'text-emerald-500':'text-red-500'} pointer-events-none z-50`}>{showFb==='ok'?'✓':'✗'}</div>}
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 8. 子組件：時光屋 (Training)
+        // ==========================================
+        const Training = ({ words, user, setView, onUpdate }) => {
+            const [cur, setCur] = useState(null);
+            const [mode, setMode] = useState('choice');
+
+            useEffect(() => { next(); }, []);
+            const next = () => {
+                setCur(words[Math.floor(Math.random() * words.length)]);
+                setMode(Math.random() > 0.5 ? 'choice' : 'spell');
+            };
+
+            const ans = (ok) => {
+                if (ok) { user.stats.spiritCount += 1; onUpdate(user); }
+                next();
+            };
+
+            if (!cur) return null;
+            return (
+                <div className="p-6 flex flex-col min-h-screen">
+                    <header className="flex justify-between items-center">
+                        <button onClick={() => setView('dashboard')} className="text-slate-500"><i data-lucide="arrow-left"></i></button>
+                        <span className="text-blue-400 font-bold tracking-widest">時光屋累積: {user.stats.spiritCount} 題</span>
+                    </header>
+                    <div className="flex-1 flex flex-col items-center justify-center space-y-12">
+                        <h2 className="text-5xl font-bold">{mode === 'choice' ? cur.en : cur.zh}</h2>
+                        {mode === 'choice' ? (
+                            <div className="w-full space-y-3">{words.slice(0, 3).concat(cur).sort(()=>0.5-Math.random()).map((o,i)=>(<button key={i} onClick={()=>ans(o.en===cur.en)} className="w-full py-5 glass rounded-xl font-bold">{o.zh}</button>))}</div>
+                        ) : (
+                            <input autoFocus className="w-full bg-transparent border-b-4 border-blue-500 text-4xl text-center outline-none" onKeyUp={e => e.key === 'Enter' && ans(e.target.value.toLowerCase() === cur.en.toLowerCase())} />
                         )}
                     </div>
                 </div>
@@ -505,30 +553,9 @@
         };
 
         // ==========================================
-        // 8. 子組件：天逆空間 (Training)
+        // 9. 子組件：仙界主宰 (Admin)
         // ==========================================
-        const Training = ({ words, user, setView }) => {
-            const [cur, setCur] = useState(null);
-            const [mode, setMode] = useState('choice');
-            useEffect(() => { next(); }, []);
-            const next = () => { setCur(words[Math.floor(Math.random()*words.length)]); setMode(Math.random()>0.5?'choice':'spell'); };
-            const ans = (ok) => { if(ok) user.stats.spiritCount+=1; next(); };
-            if (!cur) return null;
-            return (
-                <div className="flex-1 p-6 flex flex-col">
-                    <header className="flex justify-between items-center"><button onClick={()=>setView('home')}><i data-lucide="arrow-left"></i></button><span className="text-blue-400 font-bold">天逆空間 ({user.stats.spiritCount}/30)</span></header>
-                    <div className="flex-1 flex flex-col items-center justify-center space-y-12">
-                        <h2 className="text-5xl font-bold">{mode==='choice'?cur.en:cur.zh}</h2>
-                        {mode==='choice'?(<div className="w-full space-y-3">{words.slice(0,3).concat(cur).sort(()=>0.5-Math.random()).map((o,i)=>(<button key={i} onClick={()=>ans(o.en===cur.en)} className="w-full py-4 glass-panel rounded-xl">{o.zh}</button>))}</div>):(<input autoFocus className="w-full bg-transparent border-b-2 border-blue-500 text-4xl text-center outline-none" onKeyUp={e=>e.key==='Enter'&&ans(e.target.value.toLowerCase()===cur.en.toLowerCase())} />)}
-                    </div>
-                </div>
-            );
-        };
-
-        // ==========================================
-        // 9. 子組件：仙界主宰 (AdminPanel)
-        // ==========================================
-        const AdminPanel = ({ settings, setSettings, words, setWords, batches, setBatches, setView, users, setUsers }) => {
+        const AdminPanel = ({ settings, setSettings, words, setWords, batches, setBatches, users, setUsers, setView }) => {
             const [isAuth, setIsAuth] = useState(false);
             const [pw, setPw] = useState("");
 
@@ -537,68 +564,96 @@
                 if (!file) return;
                 const reader = new FileReader();
                 reader.onload = (ev) => {
-                    const lines = ev.target.result.split('\n').filter(l => l.trim());
+                    const content = ev.target.result;
+                    const lines = content.split('\n').filter(l => l.trim());
                     const bid = Date.now();
                     const news = lines.map(l => {
                         const [en, pos, zh] = l.split(',');
                         if (!en || !zh) return null;
-                        return { en: en.trim(), pos: pos.trim(), zh: zh.trim(), category: guessCategory(zh.trim()) };
+                        return { en: en.trim(), pos: pos.trim(), zh: zh.trim(), cat: guessCat(zh.trim()) };
                     }).filter(x => x);
 
-                    setWords(prev => {
-                        const map = new Map();
-                        prev.forEach(w => map.set(w.en.toLowerCase(), w));
-                        news.forEach(n => {
-                            const key = n.en.toLowerCase();
-                            if (map.has(key)) {
-                                const exist = map.get(key);
-                                if (!exist.zh.includes(n.zh)) exist.zh += `; ${n.zh}`;
-                                map.set(key, exist);
-                            } else {
-                                map.set(key, { ...n, batchId: bid, batches: [bid], mastery: 0, nextReview: Date.now() });
-                            }
-                        });
-                        return Array.from(map.values());
+                    const newWords = [...words];
+                    news.forEach(n => {
+                        const existIdx = newWords.findIndex(w => w.en.toLowerCase() === n.en.toLowerCase());
+                        if (existIdx !== -1) {
+                            if (!newWords[existIdx].zh.includes(n.zh)) newWords[existIdx].zh += `; ${n.zh}`;
+                        } else {
+                            newWords.push({ ...n, bid, mastery: 0 });
+                        }
                     });
-                    setBatches(p => [...p, { id: bid, name: `匯入: ${new Date().toLocaleString()}`, count: news.length }]);
-                    alert("匯入成功！已同步至雲端。");
+
+                    setWords(newWords);
+                    localStorage.setItem('xni_words', JSON.stringify(newWords));
+                    const newBatches = [...batches, { id: bid, date: new Date().toLocaleString(), count: news.length }];
+                    setBatches(newBatches);
+                    localStorage.setItem('xni_batches', JSON.stringify(newBatches));
+                    alert(`成功感悟 ${news.length} 卷經書！`);
                 };
                 reader.readAsText(file);
             };
 
+            const delBatch = (bid) => {
+                if (confirm("確定要焚毀此批經書嗎？")) {
+                    const nWords = words.filter(w => w.bid !== bid);
+                    setWords(nWords);
+                    localStorage.setItem('xni_words', JSON.stringify(nWords));
+                    const nBatches = batches.filter(b => b.id !== bid);
+                    setBatches(nBatches);
+                    localStorage.setItem('xni_batches', JSON.stringify(nBatches));
+                }
+            };
+
             if (!isAuth) return (
-                <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-6">
-                    <h2 className="text-2xl font-bold gold-text">主宰禁制</h2>
-                    <input type="password" placeholder="輸入主宰密碼" className="w-full p-4 glass-panel rounded-xl text-center" value={pw} onChange={e => setPw(e.target.value)} />
-                    <button onClick={() => pw === settings.adminPw ? setIsAuth(true) : alert("錯誤")} className="w-full py-4 bg-yellow-600 text-slate-950 font-bold rounded-xl">破解</button>
-                    <button onClick={()=>setView('home')} className="text-slate-500">返回</button>
+                <div className="p-8 flex flex-col items-center justify-center min-h-screen space-y-6">
+                    <h2 className="text-2xl font-bold gold-text">主宰密令</h2>
+                    <input type="password" placeholder="輸入主宰密碼" className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl text-center" value={pw} onChange={e => setPw(e.target.value)} onKeyUp={e=>e.key==='Enter' && (pw===settings.adminPw?setIsAuth(true):alert("密碼錯誤"))} />
+                    <button onClick={() => pw === settings.adminPw ? setIsAuth(true) : alert("密碼錯誤")} className="w-full py-4 btn-gold">進入後台</button>
+                    <button onClick={() => setView('dashboard')} className="text-slate-500 text-sm">返回洞府</button>
                 </div>
             );
 
             return (
-                <div className="flex-1 p-6 flex flex-col space-y-8 overflow-y-auto">
-                    <div className="flex justify-between items-center"><h2 className="text-2xl font-bold gold-text">仙界主宰</h2><button onClick={()=>setView('home')}><i data-lucide="x"></i></button></div>
-                    <section className="glass-panel p-6 rounded-3xl space-y-4">
-                        <h3 className="text-xs font-bold text-emerald-500 border-b border-white/5 pb-2 uppercase">載入仙冊 (CSV)</h3>
-                        <input type="file" id="csv" hidden accept=".csv" onChange={handleCSV} />
-                        <label htmlFor="csv" className="w-full py-4 bg-emerald-600 rounded-xl flex items-center justify-center space-x-2 cursor-pointer active:scale-95 transition-all"><i data-lucide="file-up"></i><span className="font-bold">選取 CSV 檔案</span></label>
+                <div className="p-6 flex flex-col space-y-8 overflow-y-auto h-screen pb-20">
+                    <div className="flex justify-between items-center"><h2 className="text-2xl font-bold gold-text uppercase">仙界主宰</h2><button onClick={() => setView('dashboard')} className="p-2 btn-slate rounded-full"><i data-lucide="arrow-left"></i></button></div>
+
+                    <section className="glass p-6 rounded-2xl space-y-4">
+                        <h3 className="text-xs font-black text-emerald-500 uppercase tracking-widest border-b border-white/5 pb-2">載入仙冊 (CSV)</h3>
+                        <p className="text-[10px] text-slate-500 uppercase">格式: 英文,詞性,中文</p>
+                        <input type="file" id="csv-file" hidden accept=".csv" onChange={handleCSV} />
+                        <label htmlFor="csv-file" className="w-full py-4 bg-emerald-600 rounded-xl flex items-center justify-center space-x-2 cursor-pointer active:scale-95 transition-all text-black font-black uppercase"><i data-lucide="file-up"></i><span>選取 CSV 檔案</span></label>
                     </section>
-                    <section className="glass-panel p-6 rounded-3xl space-y-4">
-                        <h3 className="text-xs font-bold text-blue-400 border-b border-white/5 pb-2 uppercase">修士管理</h3>
+
+                    <section className="glass p-6 rounded-2xl space-y-4">
+                        <h3 className="text-xs font-black text-blue-400 uppercase tracking-widest border-b border-white/5 pb-2">經書批次管理</h3>
+                        <div className="space-y-2">
+                            {batches.map(b => (
+                                <div key={b.id} className="flex justify-between items-center text-[10px] bg-slate-900/50 p-3 rounded-lg border border-white/5">
+                                    <span>{b.date} ({b.count}題)</span>
+                                    <button onClick={() => delBatch(b.id)} className="text-red-500 font-bold px-2 py-1 border border-red-500/20 rounded">焚毀</button>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
+                    <section className="glass p-6 rounded-2xl space-y-4">
+                        <h3 className="text-xs font-black text-purple-400 uppercase tracking-widest border-b border-white/5 pb-2">修士管理</h3>
                         {users.map((u, i) => (
                             <div key={i} className="flex justify-between items-center text-xs">
                                 <span>{u.name} (Exp: {u.exp})</span>
                                 <div className="space-x-2">
-                                    <button onClick={() => { const np = prompt("新密語"); if(np) u.pw = np; setUsers([...users]); }} className="text-blue-400">重置</button>
-                                    <button onClick={() => setUsers(users.filter(x => x.name !== u.name))} className="text-red-500">逐出</button>
+                                    <button onClick={() => { const np = prompt("輸入新密碼"); if(np){ u.pw=np; setUsers([...users]); localStorage.setItem('xni_users', JSON.stringify(users)); } }} className="text-blue-400 px-2 py-1 border border-blue-400/20 rounded">密碼</button>
+                                    <button onClick={() => { if(confirm(`逐出 ${u.name}？`)){ const nUsers = users.filter(x => x.name !== u.name); setUsers(nUsers); localStorage.setItem('xni_users', JSON.stringify(nUsers)); } }} className="text-red-500 px-2 py-1 border border-red-500/20 rounded">逐出</button>
                                 </div>
                             </div>
                         ))}
                     </section>
-                    <section className="glass-panel p-6 rounded-3xl space-y-4">
-                        <h3 className="text-xs font-bold text-yellow-500 border-b border-white/5 pb-2 uppercase">法則設定</h3>
+
+                    <section className="glass p-6 rounded-2xl space-y-4">
+                        <h3 className="text-xs font-black text-yellow-500 uppercase tracking-widest border-b border-white/5 pb-2">法則設定</h3>
                         <div className="space-y-4 text-xs">
-                            <div className="flex justify-between">每日挑戰輪次：<input type="number" className="w-12 bg-slate-800 rounded px-1" value={settings.maxRounds} onChange={e => setSettings({...settings, maxRounds: parseInt(e.target.value)})} /></div>
+                            <div className="flex justify-between items-center"><span>每日挑戰輪次</span><input type="number" className="w-16 bg-slate-900 border border-white/10 rounded px-2 py-1" value={settings.maxRounds} onChange={e => { const s = {...settings, maxRounds: parseInt(e.target.value)}; setSettings(s); localStorage.setItem('xni_settings', JSON.stringify(s)); }} /></div>
+                            <div className="flex justify-between items-center"><span>主宰密碼修改</span><input type="text" className="w-24 bg-slate-900 border border-white/10 rounded px-2 py-1 text-center" value={settings.adminPw} onChange={e => { const s = {...settings, adminPw: e.target.value}; setSettings(s); localStorage.setItem('xni_settings', JSON.stringify(s)); }} /></div>
                         </div>
                     </section>
                 </div>
@@ -607,7 +662,7 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-        setTimeout(() => lucide.createIcons(), 2000);
+        setTimeout(() => lucide.createIcons(), 1000);
     </script>
 </body>
 </html>
