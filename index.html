@@ -157,7 +157,7 @@ const autoCategorize = (zh) => {
                 // 2. 核心：修士名單偵聽 (強制以雲端為準)
                 if (db) {
                     const unsubscribe = db.collection("users").onSnapshot(snapshot => {
-                        const cloudUsers = snapshot.docs.map(doc => doc.data());
+                        const cloudUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         // 雲端是唯一真相：直接覆蓋本地，不與本地舊資料混合
                         setUsers(cloudUsers);
                         localStorage.setItem('sn_u', JSON.stringify(cloudUsers));
@@ -651,7 +651,7 @@ const autoCategorize = (zh) => {
 
                                 <button onClick={async () => {
                                     if (confirm(`確定要將修士 ${u.name} 逐出仙門？雲端殘魂將被徹底抹除！`)) {
-                                        if (db) await db.collection("users").doc(u.name).delete();
+                                       if (db) await db.collection("users").doc(u.id || u.name).delete();
                                         const newList = users.filter(x => x.name !== u.name);
                                         setUsers(newList);
                                         localStorage.setItem('sn_u', JSON.stringify(newList));
