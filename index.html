@@ -354,9 +354,20 @@ const autoCategorize = (zh) => {
                     </div>
 
                     <div className="flex-1 space-y-5">
-                        <button onClick={()=>setView('trial')} className="w-full h-32 glass rounded-[2.5rem] flex items-center justify-between px-10 border-yellow-500/10 hover:border-yellow-500/50 group">
-                           <div className="text-left"><h3 className="text-xl font-bold gold-text uppercase">今日試煉</h3><p className="text-[10px] text-slate-500">生死關頭 提升修為</p></div>
-                            <div className="w-16 h-16 btn-gold rounded-full flex items-center justify-center text-black group-hover:rotate-12 transition-transform"><i data-lucide="sword" size={32}></i></div>
+                        <button 
+                            onClick={() => setView('trial')} 
+                            disabled={user.stats.rounds >= settings.rounds}
+                            className={`w-full h-32 glass rounded-[2.5rem] flex items-center justify-between px-10 border-yellow-500/10 transition-all group ${user.stats.rounds >= settings.rounds ? 'opacity-50 cursor-not-allowed' : 'hover:border-yellow-500/50 active:scale-95'}`}
+                        >
+                            <div className="text-left">
+                                <h3 className="text-xl font-bold gold-text uppercase">今日試煉</h3>
+                                <p className="text-[10px] text-slate-500">
+                                    {user.stats.rounds >= settings.rounds ? '今日感悟已圓滿' : '生死關頭 提升修為'}
+                                </p>
+                            </div>
+                            <div className={`w-16 h-16 rounded-full flex items-center justify-center text-black ${user.stats.rounds >= settings.rounds ? 'bg-slate-700' : 'btn-gold'}`}>
+                                <i data-lucide={user.stats.rounds >= settings.rounds ? 'lock' : 'sword'} size={32}></i>
+                            </div>
                         </button>
                         <button onClick={()=>setView('train')} className="w-full h-32 glass rounded-[2.5rem] flex items-center justify-between px-10 border-blue-500/10 hover:border-blue-500/50 group">
                             <div className="text-left"><h3 className="text-2xl font-black text-blue-400 uppercase">天逆空間</h3><p className="text-[10px] text-slate-500">精神時光屋 磨練神識</p></div>
@@ -507,23 +518,17 @@ const autoCategorize = (zh) => {
                 } else {
                     // 3. 結算本輪
                     const finalErrs = !ok ? [...errs, q[idx]] : errs;
-                    if (finalErrs.length === 0) {
-                        if (r < settings.rounds) {
-                            alert("本輪感悟圓滿！境界提升中...");
-                            setR(r + 1);
-                            init();
-                        } else {
-                            done(true);
-                        }
-                    } else if (finalErrs.length <= settings.errors && !res) {
+if(finalErrs.length === 0) {
+                        // 圓滿完成這 10 題，直接結算，不再循環進入下一輪
+                        alert("此輪感悟圓滿！神識更進一步。");
+                        done(true);
+                    } else if(finalErrs.length <= settings.errors && !res) {
                         alert(`神識受損！開啟敗部復活重修 (共 ${finalErrs.length} 題)`);
-                        setRes(true);
-                        setQ([...finalErrs]);
-                        setErrs([]);
-                        setIdx(0);
-                    } else {
-                        alert("道心受挫，今日試煉終止！");
-                        done(false);
+                        setRes(true); setQ([...finalErrs]); setErrs([]); setIdx(0);
+                    } else { 
+                        alert("道心受挫，今日試煉終止！"); 
+                        done(false); 
+                    }
                     }
                 }
             };
