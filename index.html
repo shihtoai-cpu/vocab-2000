@@ -144,31 +144,32 @@ const autoCategorize = (zh) => {
             const [settings, setSettings] = useState({ rounds: 3, questions: 10, errors: 3, adminPw: "123456" });
 
             // 初始同步
-          // 初始同步：修正後的「滅鬼」邏輯
+           // 初始同步：滅鬼邏輯 (從第147行開始替換)
             useEffect(() => {
                 const load = (k, d) => JSON.parse(localStorage.getItem(k) || d);
-                // 先讀取本地作為備緩
+                
+                // A. 載入單字庫與設定 (這些通常不常變動)
                 setWords(load('sn_w', '[]'));
                 setBatches(load('sn_b', '[]'));
                 const s = load('sn_s', 'null');
                 if (s) setSettings(s);
 
-                // 核心：雲端修士偵聽 (這是唯一真相)
+                // B. 核心：雲端修士偵聽 (強制以雲端為準，斬斷殘魂)
                 if (db) {
                     const unsubscribe = db.collection("users").onSnapshot(snapshot => {
                         const cloudUsers = snapshot.docs.map(doc => doc.data());
-                        if (cloudUsers.length > 0) {
-                            setUsers(cloudUsers);
-                            localStorage.setItem('sn_u', JSON.stringify(cloudUsers));
-                        } else if (snapshot.metadata.fromCache === false) {
-                            // 如果雲端空了，本地也得清空
-                            setUsers([]);
-                            localStorage.setItem('sn_u', JSON.stringify([]));
-                        }
+                        
+                        // 不管雲端抓到幾個人 (甚至是 0 個)，都直接覆蓋本地
+                        setUsers(cloudUsers);
+                        localStorage.setItem('sn_u', JSON.stringify(cloudUsers));
+                        
+                        console.log("仙名冊已強制同步。目前人數:", cloudUsers.length);
+                    }, error => {
+                        console.error("偵聽仙界失敗:", error);
                     });
                     return () => unsubscribe();
                 } else {
-                    // 無雲端時才使用本地名單
+                    // 若沒連上雲端，才退而求其次使用本地快取
                     setUsers(load('sn_u', '[]'));
                 }
             }, []);
