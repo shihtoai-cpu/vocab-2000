@@ -291,12 +291,46 @@ const autoCategorize = (zh) => {
                 <div className="p-6 flex flex-col h-screen space-y-6 pb-24">
                     <header className="flex justify-between items-center mt-6">
                         <div className="flex items-center space-x-4">
-                            <img src={user.avatar} className="w-16 h-16 rounded-full border-2 border-yellow-500 object-cover shadow-2xl" />
-                            <div>
-                                <h2 className="text-2xl font-bold">{user.name}</h2>
-                                <p className={`text-[11px] font-black uppercase ${info.c}`}>{info.m}・{info.s}</p>
-                            </div>
+                    {/* 點擊頭像即可直接易容 (更換照片) */}
+                    <div className="relative group cursor-pointer" onClick={() => document.getElementById('lobby-avatar-input').click()}>
+                        <img 
+                            src={user.avatar} 
+                            className="w-16 h-16 rounded-full border-2 border-yellow-500 object-cover shadow-2xl hover:brightness-110 transition-all" 
+                            title="點擊重塑神識顯像"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i data-lucide="camera" size={14} className="text-white"></i>
                         </div>
+                        <input 
+                            type="file" 
+                            id="lobby-avatar-input" 
+                            hidden 
+                            accept="image/*" 
+                            onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = async (ev) => {
+                                        const dataUrl = ev.target.result;
+                                        // 呼叫 App 傳下來的更新函數，這會同步 LocalStorage 與 State
+                                        onUpdate({ ...user, avatar: dataUrl });
+                                        // 同步雲端
+                                        if (typeof db !== 'undefined' && db) {
+                                            try { await db.collection("users").doc(user.name).update({ avatar: dataUrl }); }
+                                            catch (err) { console.error("雲端同步失敗", err); }
+                                        }
+                                        alert("易容成功！神識顯像已重塑。");
+                                    };
+                                    reader.readAsDataURL(file);
+                                }
+                            }} 
+                        />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold">{user.name}</h2>
+                        <p className={`text-[11px] font-black uppercase ${info.c}`}>{info.m}・{info.s}</p>
+                    </div>
+                </div>
                         <button onClick={()=>setView('admin')} className="p-4 glass rounded-full text-yellow-500"><i data-lucide="shield-check"></i></button>
                     </header>
 
