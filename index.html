@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+    <!-- PWA 核心命格設定 -->
+<link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIsS76YGT6YmYwrfku5npgIbllr7lrZfkv28iLAogICJzaG9ydF9uYW1lIjogIsS76YGT6YmYIiwKICAic3RhcnRfdXJsIjogIi4iLAogICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMDIwNjE3IiwKICAidGhlbWVfY29sb3ciOiAiIzAyMDYxNyIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vYXBpLmRpY2ViZWFyLmNvbS83LngvYXZhdGFhcnMvc3ZnP3NlZWQ9WGlhbiIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0KICBdCn0=">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="天道碑">
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>天逆珠・仙逆單字傳 - 踏天終焉</title>
@@ -805,5 +812,37 @@ const Trial = ({ user, settings, words, setView, onUpdate }) => {
         root.render(<App />);
         setTimeout(() => lucide.createIcons(), 1000);
     </script>
+
+<script>
+    // 註冊 PWA 護法神識 (Service Worker)
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            const swCode = `
+                const CACHE_NAME = 'xianni-v1';
+                self.addEventListener('install', (e) => {
+                    self.skipWaiting();
+                });
+                self.addEventListener('fetch', (e) => {
+                    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+                });
+            `;
+            const blob = new Blob([swCode], { type: 'text/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).then(reg => {
+                console.log('護法神識已就位 (PWA Registered)');
+            }).catch(err => {
+                console.log('護法神識覺醒失敗', err);
+            });
+        });
+    }
+
+    // 攔截並自定義安裝提示 (Android)
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        // 可以在這裡做一個華麗的按鈕提示用戶「領取天逆珠 (安裝App)」
+    });
+</script>    
 </body>
 </html>
