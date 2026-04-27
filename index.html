@@ -214,31 +214,58 @@ const autoCategorize = (zh) => {
         };
 
         // --- 3. 神識刻印 (手寫訓練核心) ---
-        const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
+const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
             const [input, setInput] = useState("");
             const [isError, setIsError] = useState(false);
+            const inputRef = useRef(null);
 
+            // 自動聚焦
             useEffect(() => {
-                const handleKey = (e) => {
-                    if (e.key === "Backspace") { setInput(s => s.slice(0, -1)); setIsError(false); }
-                    else if (e.key === "Enter" && input.length > 0) {
-                        if (input.toLowerCase() === word.toLowerCase()) { onResult(true, 500); }
-                        else { setIsError(true); setTimeout(() => setIsError(false), 500); }
+                if (inputRef.current) inputRef.current.focus();
+            }, []);
+
+            const handleInputChange = (e) => {
+                const val = e.target.value;
+                // 只允許英文字母與空格
+                if (/^[a-zA-Z ]*$/.test(val)) {
+                    if (val.length <= word.length) {
+                        setInput(val);
+                        setIsError(false);
                     }
-                    else if (e.key.length === 1 && /[a-zA-Z ]/.test(e.key)) {
-                        if (input.length < word.length) setInput(s => s + e.key);
+                }
+            };
+
+            const handleKeyDown = (e) => {
+                if (e.key === "Enter" && input.length > 0) {
+                    if (input.toLowerCase() === word.toLowerCase()) {
+                        onResult(true, 500);
+                    } else {
+                        setIsError(true);
+                        setTimeout(() => setIsError(false), 500);
                     }
-                };
-                window.addEventListener("keydown", handleKey);
-                return () => window.removeEventListener("keydown", handleKey);
-            }, [input, word]);
+                }
+            };
 
             return (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-12">
+                <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-12 w-full" 
+                     onClick={() => inputRef.current && inputRef.current.focus()}>
+                    
+                    {/* 隱藏輸入框：統一管理 PC 與手機輸入 */}
+                    <input 
+                        ref={inputRef}
+                        type="text"
+                        className="absolute opacity-0 pointer-events-none"
+                        value={input}
+                        onChange={handleInputChange}
+                        onKeyDown={handleKeyDown}
+                        autoFocus
+                    />
+
                     <div className="text-center space-y-2">
-                        <p className="text-slate-500 text-[10px] tracking-[0.5em] uppercase">神識刻印</p>
+                        <p className="text-slate-500 text-[10px] tracking-[0.5em] uppercase">神識刻印 (點擊畫面喚起鍵盤)</p>
                         <h2 className="text-5xl font-bold text-white">{zh}</h2>
                     </div>
+
                     <div className="flex flex-wrap justify-center gap-y-10 max-w-full">
                         {word.split("").map((char, i) => (
                             char === " " 
@@ -251,7 +278,11 @@ const autoCategorize = (zh) => {
                               </div>
                         ))}
                     </div>
-                    <div className="text-slate-600 text-[10px] uppercase tracking-widest animate-pulse">請直接敲擊鍵盤輸入，Enter 提交感悟</div>
+
+                    <div className="text-slate-600 text-[10px] uppercase tracking-widest animate-pulse">
+                        {input.length > 0 ? "按 Enter 提交感悟" : "請直接輸入英文單字"}
+                    </div>
+                    
                     <button onClick={onBack} className="btn-exit">中斷刻印</button>
                 </div>
             );
@@ -316,49 +347,41 @@ const autoCategorize = (zh) => {
 
             // 初始同步
 // 初始同步：滅鬼邏輯 (確保雲端為準)
-            // 初始同步：萬界歸一邏輯
-useEffect(() => {
-    const load = (k, d) => JSON.parse(localStorage.getItem(k) || d);
-    
-    // 1. 載入本地設定 (作為備援)
-    setBatches(load('sn_b', '[]'));
-    const s = load('sn_s', 'null');
-    if (s) setSettings(s);
+// 初始同步：萬界歸一邏輯 (整合本地備援與雲端同步)
+            useEffect(() => {
+                const load = (k, d) => JSON.parse(localStorage.getItem(k) || d);
+                
+                // 1. 優先載入本地數據，確保瞬間開啟不白屏
+                setWords(load('sn_w', '[]'));
+                setBatches(load('sn_b', '[]'));
+                const s = load('sn_s', 'null');
+                if (s) setSettings(s);
 
-    // 2. 核心：從雲端抓取「全域經書」與「系統設定」
-    if (db) {
-        // 抓取全域配置 (單字、批次、設定)
-        db.collection("global").doc("config").get().then(doc => {
-            if (doc.exists) {
-                const data = doc.data();
-                if (data.words) {
-                    setWords(data.words);
-                    localStorage.setItem('sn_w', JSON.stringify(data.words));
-                }
-                if (data.batches) {
-                    setBatches(data.batches);
-                    localStorage.setItem('sn_b', JSON.stringify(data.batches));
-                }
-                if (data.settings) {
-                    setSettings(data.settings);
-                    localStorage.setItem('sn_s', JSON.stringify(data.settings));
-                }
-                console.log("全域經書同步成功，共匯入:", data.words?.length);
-            }
-        });
+                if (db) {
+                    // 2. 從雲端抓取「全域經書」與「系統設定」更新本地
+                    db.collection("global").doc("config").get().then(doc => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            if (data.words) { setWords(data.words); localStorage.setItem('sn_w', JSON.stringify(data.words)); }
+                            if (data.batches) { setBatches(data.batches); localStorage.setItem('sn_b', JSON.stringify(data.batches)); }
+                            if (data.settings) { setSettings(data.settings); localStorage.setItem('sn_s', JSON.stringify(data.settings)); }
+                        }
+                    });
 
-        // 3. 修士名單偵聽 (保持不變)
-        const unsubscribe = db.collection("users").onSnapshot(snapshot => {
-            const cloudUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setUsers(cloudUsers);
-            localStorage.setItem('sn_u', JSON.stringify(cloudUsers));
-        });
-        return () => unsubscribe();
-    } else {
-        setWords(load('sn_w', '[]'));
-        setUsers(load('sn_u', '[]'));
-    }
-}, []);
+                    // 3. 修士名單即時監聽
+                    const unsubscribe = db.collection("users").onSnapshot(snapshot => {
+                        const cloudUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        setUsers(cloudUsers);
+                        localStorage.setItem('sn_u', JSON.stringify(cloudUsers));
+                    });
+                    return () => unsubscribe();
+                } else {
+                    setUsers(load('sn_u', '[]'));
+                }
+            }, []);
+
+            // 監聽分頁切換，重新點亮圖示
+            useEffect(() => { if (window.lucide) lucide.createIcons(); }, [tab, view]);
                 
                 // 1. 載入單字庫與設定 (這些變動較少，先讀取本地備緩)
                 setWords(load('sn_w', '[]'));
@@ -439,6 +462,8 @@ useEffect(() => {
     )}
                         {view === 'trial' && <Trial user={user} settings={settings} words={words} onUpdate={onUserUpdate} setView={setView} />}
                         {view === 'train' && <Training user={user} words={words} onUpdate={onUserUpdate} setView={setView} />}
+                        {/* 插入下方這段 */}
+                        {view === 'reverse_train' && <ReverseTrain words={words} setView={setView} />}
                         {view === 'admin' && <Admin settings={settings} setSettings={(s)=>persist(null,null,null,s)} words={words} setWords={(w)=>persist(null,w,null,null)} batches={batches} setBatches={(b)=>persist(null,null,b,null)} users={users} setUsers={(u)=>persist(u)} setView={setView} curUser={user} setCurUser={setUser} />}
                     </div>
                 </div>
