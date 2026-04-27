@@ -336,6 +336,9 @@ const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
         </div>
     );
 };
+       // ==========================================
+        // 核心邏輯模組 (重塑版 - 解決黑畫面與同步問題)
+        // ==========================================
         const App = () => {
             const [view, setView] = useState('gate');
             const [tab, setTab] = useState('home');
@@ -345,30 +348,38 @@ const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
             const [batches, setBatches] = useState([]);
             const [settings, setSettings] = useState({ rounds: 3, questions: 10, errors: 3, adminPw: "123456" });
 
-            // 初始同步
-// 初始同步：滅鬼邏輯 (確保雲端為準)
-// 初始同步：萬界歸一邏輯 (整合本地備援與雲端同步)
+            // 唯一初始同步：萬界歸一邏輯
             useEffect(() => {
                 const load = (k, d) => JSON.parse(localStorage.getItem(k) || d);
                 
-                // 1. 優先載入本地數據，確保瞬間開啟不白屏
-                setWords(load('sn_w', '[]'));
+                // 1. 本地備援載入 (確保瞬間開啟)
+                const localWords = load('sn_w', '[]');
+                setWords(localWords);
                 setBatches(load('sn_b', '[]'));
                 const s = load('sn_s', 'null');
                 if (s) setSettings(s);
 
                 if (db) {
-                    // 2. 從雲端抓取「全域經書」與「系統設定」更新本地
+                    // 2. 雲端全域經書同步 (抓取電腦端的匯入)
                     db.collection("global").doc("config").get().then(doc => {
                         if (doc.exists) {
                             const data = doc.data();
-                            if (data.words) { setWords(data.words); localStorage.setItem('sn_w', JSON.stringify(data.words)); }
-                            if (data.batches) { setBatches(data.batches); localStorage.setItem('sn_b', JSON.stringify(data.batches)); }
-                            if (data.settings) { setSettings(data.settings); localStorage.setItem('sn_s', JSON.stringify(data.settings)); }
+                            if (data.words) {
+                                setWords(data.words);
+                                localStorage.setItem('sn_w', JSON.stringify(data.words));
+                            }
+                            if (data.batches) {
+                                setBatches(data.batches);
+                                localStorage.setItem('sn_b', JSON.stringify(data.batches));
+                            }
+                            if (data.settings) {
+                                setSettings(data.settings);
+                                localStorage.setItem('sn_s', JSON.stringify(data.settings));
+                            }
                         }
                     });
 
-                    // 3. 修士名單即時監聽
+                    // 3. 修士名冊即時偵聽 (元神同步)
                     const unsubscribe = db.collection("users").onSnapshot(snapshot => {
                         const cloudUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         setUsers(cloudUsers);
@@ -380,40 +391,19 @@ const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
                 }
             }, []);
 
-            // 監聽分頁切換，重新點亮圖示
-            useEffect(() => { if (window.lucide) lucide.createIcons(); }, [tab, view]);
-                
-                // 1. 載入單字庫與設定 (這些變動較少，先讀取本地備緩)
-                setWords(load('sn_w', '[]'));
-                setBatches(load('sn_b', '[]'));
-                const s = load('sn_s', 'null');
-                if (s) setSettings(s);
-
-                // 2. 核心：修士名單偵聽 (強制以雲端為準)
-                if (db) {
-                    const unsubscribe = db.collection("users").onSnapshot(snapshot => {
-                        const cloudUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        // 雲端是唯一真相：直接覆蓋本地，不與本地舊資料混合
-                        setUsers(cloudUsers);
-                        localStorage.setItem('sn_u', JSON.stringify(cloudUsers));
-                        console.log("仙名冊已同步，雲端修士數:", cloudUsers.length);
-                    }, error => {
-                        console.error("仙界連線中斷:", error);
-                    });
-                    return () => unsubscribe();
-                } else {
-                    // 若無雲端連線，才使用本地修士名單
-                    setUsers(load('sn_u', '[]'));
+            // 監聽分頁與視圖切換，重新點亮 Lucide 圖示
+            useEffect(() => {
+                if (window.lucide) {
+                    setTimeout(() => lucide.createIcons(), 100);
                 }
-            }, []);
+            }, [tab, view]);
+
             const persist = (u, w, b, s) => {
-                // 這裡只存本地，絕對不准自動推整份名單上雲端！
                 if (u) { setUsers(u); localStorage.setItem('sn_u', JSON.stringify(u)); }
                 if (w) { setWords(w); localStorage.setItem('sn_w', JSON.stringify(w)); }
                 if (b) { setBatches(b); localStorage.setItem('sn_b', JSON.stringify(b)); }
                 if (s) { setSettings(s); localStorage.setItem('sn_s', JSON.stringify(s)); }
                 
-                // 雲端同步僅限於「全域配置」，不包含修士名單
                 if (db && (w || b || s)) {
                     db.collection("global").doc("config").set({ 
                         words: w || words, 
@@ -425,45 +415,50 @@ const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
 
             const onUserUpdate = (updated) => {
                 const newList = users.map(x => x.name === updated.name ? updated : x);
-                persist(newList); setUser(updated);
+                persist(newList); 
+                setUser(updated);
+                if (db) db.collection("users").doc(updated.name).set(updated, { merge: true });
             };
 
             return (
                 <div className="relative min-h-screen flex flex-col items-center overflow-hidden">
                     <div className="vortex"></div>
                     <div className="relative z-10 w-full max-w-md min-h-screen flex flex-col">
+                        
                         {view === 'gate' && <Gate users={users} setView={setView} setUser={setUser} />}
+                        
                         {view === 'reg' && <Register onBack={()=>setView('gate')} onDone={(u)=>{ persist([...users, u]); setView('gate'); }} />}
+                        
                         {view === 'lobby' && (
-        <div className="flex-1 flex flex-col h-screen">
-            {/* 內容區塊 */}
-            <div className="flex-1 overflow-hidden">
-                {tab === 'home' && <Lobby user={user} settings={settings} setView={setView} onLogout={()=>setView('gate')} onUpdate={onUserUpdate} />}
-                {tab === 'hall' && <HallOfFame users={users} />}
-                {tab === 'store' && <Treasury words={words} user={user} />}
-            </div>
+                            <div className="flex-1 flex flex-col h-screen">
+                                <div className="flex-1 overflow-hidden">
+                                    {tab === 'home' && <Lobby user={user} settings={settings} setView={setView} onLogout={()=>setView('gate')} onUpdate={onUserUpdate} />}
+                                    {tab === 'hall' && <HallOfFame users={users} />}
+                                    {tab === 'store' && <Treasury words={words} user={user} />}
+                                </div>
+                                <nav className="fixed bottom-0 left-0 right-0 h-20 glass border-t border-white/5 flex justify-around items-center px-4 z-50">
+                                    <button onClick={() => setTab('home')} className={`nav-item flex flex-col items-center space-y-1 ${tab === 'home' ? 'nav-active' : 'text-slate-500'}`}>
+                                        <i data-lucide="home" className="w-5 h-5"></i>
+                                        <span className="text-[10px] font-bold">洞府</span>
+                                    </button>
+                                    <button onClick={() => setTab('hall')} className={`nav-item flex flex-col items-center space-y-1 ${tab === 'hall' ? 'nav-active' : 'text-slate-500'}`}>
+                                        <i data-lucide="trophy" className="w-5 h-5"></i>
+                                        <span className="text-[10px] font-bold">封神碑</span>
+                                    </button>
+                                    <button onClick={() => setTab('store')} className={`nav-item flex flex-col items-center space-y-1 ${tab === 'store' ? 'nav-active' : 'text-slate-500'}`}>
+                                        <i data-lucide="swords" className="w-5 h-5"></i>
+                                        <span className="text-[10px] font-bold">萬寶閣</span>
+                                    </button>
+                                </nav>
+                            </div>
+                        )}
 
-            {/* 底部導航欄 */}
-            <nav className="fixed bottom-0 left-0 right-0 h-20 glass border-t border-white/5 flex justify-around items-center px-4 z-50">
-                <button onClick={() => setTab('home')} className={`nav-item flex flex-col items-center space-y-1 ${tab === 'home' ? 'nav-active' : 'text-slate-500'}`}>
-                    <i data-lucide="home" className="w-5 h-5"></i>
-                    <span className="text-[10px] font-bold">洞府</span>
-                </button>
-                <button onClick={() => setTab('hall')} className={`nav-item flex flex-col items-center space-y-1 ${tab === 'hall' ? 'nav-active' : 'text-slate-500'}`}>
-                    <i data-lucide="trophy" className="w-5 h-5"></i>
-                    <span className="text-[10px] font-bold">封神碑</span>
-                </button>
-                <button onClick={() => setTab('store')} className={`nav-item flex flex-col items-center space-y-1 ${tab === 'store' ? 'nav-active' : 'text-slate-500'}`}>
-                    <i data-lucide="swords" className="w-5 h-5"></i>
-                    <span className="text-[10px] font-bold">萬寶閣</span>
-                </button>
-            </nav>
-        </div>
-    )}
                         {view === 'trial' && <Trial user={user} settings={settings} words={words} onUpdate={onUserUpdate} setView={setView} />}
+                        
                         {view === 'train' && <Training user={user} words={words} onUpdate={onUserUpdate} setView={setView} />}
-                        {/* 插入下方這段 */}
+                        
                         {view === 'reverse_train' && <ReverseTrain words={words} setView={setView} />}
+                        
                         {view === 'admin' && <Admin settings={settings} setSettings={(s)=>persist(null,null,null,s)} words={words} setWords={(w)=>persist(null,w,null,null)} batches={batches} setBatches={(b)=>persist(null,null,b,null)} users={users} setUsers={(u)=>persist(u)} setView={setView} curUser={user} setCurUser={setUser} />}
                     </div>
                 </div>
