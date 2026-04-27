@@ -475,7 +475,7 @@ const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
 
                         {view === 'trial' && <Trial user={user} settings={settings} words={words} onUpdate={onUserUpdate} setView={setView} />}
                         
-                        {view === 'train' && <Training user={user} words={words} onUpdate={onUserUpdate} setView={setView} />}
+                       {view === 'train' && <Training user={user} words={words} onUpdate={onUserUpdate} setView={setView} />}
                         
                     {view === 'reverse_train' && <ReverseTrain words={words} user={user} onUpdate={onUserUpdate} setView={setView} />}
                         
@@ -573,60 +573,38 @@ const ancient = getAncientRealm(user.ancientExp || 0);
                 lucide.createIcons();
             }, []);
 
-            return (
-                <div className="p-6 flex flex-col h-screen space-y-6 pb-24">
+return (
+                <div className="p-6 flex flex-col h-screen space-y-6 pb-24 overflow-y-auto">
                     <header className="flex justify-between items-center mt-6">
                         <div className="flex items-center space-x-4">
-                    {/* 點擊頭像即可直接易容 (更換照片) */}
-                    <div className="relative group cursor-pointer" onClick={() => document.getElementById('lobby-avatar-input').click()}>
-                        <img 
-                            src={user.avatar} 
-                            className="w-16 h-16 rounded-full border-2 border-yellow-500 object-cover shadow-2xl hover:brightness-110 transition-all" 
-                            title="點擊重塑神識顯像"
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                            <i data-lucide="camera" size={14} className="text-white"></i>
-                        </div>
-                        <input 
-                            type="file" 
-                            id="lobby-avatar-input" 
-                            hidden 
-                            accept="image/*" 
-                            onChange={(e) => {
-                                const file = e.target.files[0];
-                                if (file) {
-                                    const reader = new FileReader();
-                                    reader.onload = async (ev) => {
-                                        const dataUrl = ev.target.result;
-                                        // 呼叫 App 傳下來的更新函數，這會同步 LocalStorage 與 State
-                                        onUpdate({ ...user, avatar: dataUrl });
-                                        // 同步雲端
-                                        if (typeof db !== 'undefined' && db) {
-                                            try { await db.collection("users").doc(user.name).update({ avatar: dataUrl }); }
-                                            catch (err) { console.error("雲端同步失敗", err); }
+                            <div className="relative group cursor-pointer" onClick={() => document.getElementById('lobby-avatar-input').click()}>
+                                <img 
+                                    src={user.avatar} 
+                                    className="w-16 h-16 rounded-full border-2 border-yellow-500 object-cover shadow-2xl hover:brightness-110 transition-all" 
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <i data-lucide="camera" size={14} className="text-white"></i>
+                                </div>
+                                <input 
+                                    type="file" id="lobby-avatar-input" hidden accept="image/*" 
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            reader.onload = (ev) => onUpdate({ ...user, avatar: ev.target.result });
+                                            reader.readAsDataURL(file);
                                         }
-                                        alert("易容成功！神識顯像已重塑。");
-                                    };
-                                    reader.readAsDataURL(file);
-                                }
-                            }} 
-                        />
-                    </div>
-<div>
-    <h2 className="text-2xl font-bold">{user.name}</h2>
-    <div className="flex items-center space-x-2">
-        {/* 分身修道境界 */}
-        <p className={`text-[11px] font-black uppercase ${info.c}`}>
-            {info.m}・{info.s}
-        </p>
-        
-        {/* 本尊古神稱號 */}
-        <p className="text-[11px] font-black uppercase text-orange-500 shadow-orange-500/20">
-            ◆ {ancient.n}
-        </p>
-    </div>
-</div>
-                </div>
+                                    }} 
+                                />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold">{user.name}</h2>
+                                <div className="flex items-center space-x-2">
+                                    <p className={`text-[11px] font-black uppercase ${info.c}`}>{info.m}・{info.s}</p>
+                                    <p className="text-[11px] font-black uppercase text-orange-500 shadow-orange-500/20">◆ {ancient.n}</p>
+                                </div>
+                            </div>
+                        </div>
                         <button onClick={()=>setView('admin')} className="p-4 glass rounded-full text-yellow-500"><i data-lucide="shield-check"></i></button>
                     </header>
 
@@ -641,64 +619,55 @@ const ancient = getAncientRealm(user.ancientExp || 0);
                         <div className="glass p-5 rounded-3xl text-center"><p className="text-[10px] text-slate-500 font-bold">時光屋</p><p className="text-3xl font-black text-blue-400 font-mono">{user.stats.spirit} 題</p></div>
                     </div>
 
-<div className="flex-1 space-y-6">
-    {/* 雙修系統：今日試煉 & 逆練神識 並排區 */}
-    <div className="grid grid-cols-2 gap-4">
-        
-        {/* 1. 今日試煉 (分身修道) */}
-        <div 
-            onClick={() => user.stats.rounds < settings.rounds && setView('trial')} 
-            className={`glass p-6 rounded-[2.5rem] flex flex-col items-center justify-center space-y-4 cursor-pointer transition-all active:scale-95 ${user.stats.rounds >= settings.rounds ? 'opacity-50 grayscale' : 'hover:border-yellow-500/30'}`}
-        >
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center text-black ${user.stats.rounds >= settings.rounds ? 'bg-slate-700' : 'btn-gold'}`}>
-                <i data-lucide={user.stats.rounds >= settings.rounds ? 'lock' : 'sword'} size={28}></i>
-            </div>
-            <div className="text-center">
-                <h3 className="font-black gold-text text-lg">今日試煉</h3>
-                <p className="text-[10px] text-slate-500 uppercase tracking-tighter">
-                    {user.stats.rounds >= settings.rounds ? '感悟已滿' : '分身 · 修道'}
-                </p>
-            </div>
-        </div>
+                    <div className="flex-1 space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div 
+                                onClick={() => user.stats.rounds < settings.rounds && setView('trial')} 
+                                className={`glass p-6 rounded-[2.5rem] flex flex-col items-center justify-center space-y-4 cursor-pointer transition-all active:scale-95 ${user.stats.rounds >= settings.rounds ? 'opacity-50 grayscale' : 'hover:border-yellow-500/30'}`}
+                            >
+                                <div className={`w-14 h-14 rounded-full flex items-center justify-center text-black ${user.stats.rounds >= settings.rounds ? 'bg-slate-700' : 'btn-gold'}`}>
+                                    <i data-lucide={user.stats.rounds >= settings.rounds ? 'lock' : 'sword'} size={28}></i>
+                                </div>
+                                <div className="text-center">
+                                    <h3 className="font-black gold-text text-lg">今日試煉</h3>
+                                    <p className="text-[10px] text-slate-500 uppercase tracking-tighter">{user.stats.rounds >= settings.rounds ? '感悟已滿' : '分身 · 修道'}</p>
+                                </div>
+                            </div>
 
-        {/* 2. 逆練神識 (本尊古神) */}
-        <div 
-            onClick={() => setView('reverse_train')} 
-            className="glass p-6 rounded-[2.5rem] flex flex-col items-center justify-center space-y-4 cursor-pointer transition-all active:scale-95 hover:border-rose-500/30"
-        >
-            <div className="w-14 h-14 bg-rose-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-rose-900/20">
-                <i data-lucide="rotate-ccw" size={28}></i>
-            </div>
-            <div className="text-center">
-                <h3 className="font-black text-rose-400 text-lg">逆練神識</h3>
-                <p className="text-[10px] text-slate-500 uppercase tracking-tighter">本尊 · 古神</p>
-            </div>
-        </div>
-        
-    </div>
+                            <div 
+                                onClick={() => setView('reverse_train')} 
+                                className="glass p-6 rounded-[2.5rem] flex flex-col items-center justify-center space-y-4 cursor-pointer transition-all active:scale-95 hover:border-rose-500/30"
+                            >
+                                <div className="w-14 h-14 bg-rose-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-rose-900/20">
+                                    <i data-lucide="rotate-ccw" size={28}></i>
+                                </div>
+                                <div className="text-center">
+                                    <h3 className="font-black text-rose-400 text-lg">逆練神識</h3>
+                                    <p className="text-[10px] text-slate-500 uppercase tracking-tighter">本尊 · 古神</p>
+                                </div>
+                            </div>
+                        </div>
 
-    {/* 天逆空間 (原本的天逆按鈕，改為長條橫向顯示) */}
-    <div 
-        onClick={() => setView('train')} 
-        className="glass p-5 rounded-3xl flex items-center justify-between cursor-pointer hover:border-blue-500/30 transition-all active:scale-[0.98]"
-    >
-        <div className="flex items-center space-x-4">
-            <div className="p-3 bg-blue-500/20 text-blue-400 rounded-2xl">
-                <i data-lucide="zap" size={24}></i>
-            </div>
-            <div>
-                <h4 className="font-bold text-blue-400">天逆空間</h4>
-                <p className="text-[10px] text-slate-500">精神時光屋 · 磨練神識</p>
-            </div>
-        </div>
-        <i data-lucide="chevron-right" className="text-slate-700 mr-2"></i>
-    </div>
-    </div>
-    <button onClick={onLogout} className="w-full text-slate-600 text-xs font-black tracking-[0.5em] uppercase py-8">
-        神魂離體 (登出)
-    </button>
+                        <div 
+                            onClick={() => setView('train')} 
+                            className="glass p-5 rounded-3xl flex items-center justify-between cursor-pointer hover:border-blue-500/30 transition-all active:scale-[0.98]"
+                        >
+                            <div className="flex items-center space-x-4">
+                                <div className="p-3 bg-blue-500/20 text-blue-400 rounded-2xl"><i data-lucide="zap" size={24}></i></div>
+                                <div>
+                                    <h4 className="font-bold text-blue-400">天逆空間</h4>
+                                    <p className="text-[10px] text-slate-500">精神時光屋 · 磨練神識</p>
+                                </div>
+                            </div>
+                            <i data-lucide="chevron-right" className="text-slate-700 mr-2"></i>
+                        </div>
+                    </div>
+
+                    <button onClick={onLogout} className="w-full text-slate-600 text-xs font-black tracking-[0.5em] uppercase py-8">神魂離體 (登出)</button>
+                </div>
             );
         };
+  
 
         // ==========================================
         // 子組件: 拼寫核心引擎 (SpellingEngine)
