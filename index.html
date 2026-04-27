@@ -648,40 +648,59 @@ const ancient = getAncientRealm(user.ancientExp || 0);
                         <div className="glass p-5 rounded-3xl text-center"><p className="text-[10px] text-slate-500 font-bold">時光屋</p><p className="text-3xl font-black text-blue-400 font-mono">{user.stats.spirit} 題</p></div>
                     </div>
 
-                    <div className="flex-1 space-y-5">
-                        <button 
-                            onClick={() => setView('trial')} 
-                            disabled={user.stats.rounds >= settings.rounds}
-                            className={`w-full h-32 glass rounded-[2.5rem] flex items-center justify-between px-10 border-yellow-500/10 transition-all group ${user.stats.rounds >= settings.rounds ? 'opacity-50 cursor-not-allowed' : 'hover:border-yellow-500/50 active:scale-95'}`}
-                        >
-                            <div className="text-left">
-                                <h3 className="text-xl font-bold gold-text uppercase">今日試煉</h3>
-                                <p className="text-[10px] text-slate-500">
-                                    {user.stats.rounds >= settings.rounds ? '今日感悟已圓滿' : '生死關頭 提升修為'}
-                                </p>
-                            </div>
-                            <div className={`w-16 h-16 rounded-full flex items-center justify-center text-black ${user.stats.rounds >= settings.rounds ? 'bg-slate-700' : 'btn-gold'}`}>
-                                <i data-lucide={user.stats.rounds >= settings.rounds ? 'lock' : 'sword'} size={32}></i>
-                            </div>
-                        </button>
-                        {/* --- 請在這邊貼上你的逆練神識按鈕 --- */}
-    <button 
-        onClick={() => setView('reverse_train')} 
-        className="w-full h-24 glass rounded-[2rem] flex items-center justify-between px-10 border-rose-500/10 hover:border-rose-500/50 group mt-4"
+<div className="flex-1 space-y-6">
+    {/* 雙修系統核心並排區 */}
+    <div className="grid grid-cols-2 gap-4">
+        
+        {/* 1. 今日試煉 (分身修道) */}
+        <div 
+            onClick={() => user.stats.rounds < settings.rounds && setView('trial')} 
+            className={`glass p-6 rounded-[2.5rem] flex flex-col items-center justify-center space-y-4 cursor-pointer transition-all active:scale-95 border-b-4 border-indigo-500 ${user.stats.rounds >= settings.rounds ? 'opacity-50 grayscale' : 'hover:bg-indigo-50'}`}
+        >
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg ${user.stats.rounds >= settings.rounds ? 'bg-slate-400' : 'bg-indigo-500 shadow-indigo-200'}`}>
+                <i data-lucide={user.stats.rounds >= settings.rounds ? 'lock' : 'sword'} size={28}></i>
+            </div>
+            <div className="text-center">
+                <h3 className="font-black text-slate-800 text-lg">今日試煉</h3>
+                <p className="text-[10px] text-slate-500 uppercase tracking-tighter">
+                    {user.stats.rounds >= settings.rounds ? '今日感悟已滿' : '分身 · 修道系統'}
+                </p>
+            </div>
+        </div>
+
+        {/* 2. 逆練神識 (本尊古神) */}
+        <div 
+            onClick={() => setView('reverse_train')} 
+            className="glass p-6 rounded-[2.5rem] flex flex-col items-center justify-center space-y-4 cursor-pointer hover:bg-orange-50 border-b-4 border-orange-500 transition-all active:scale-95"
+        >
+            <div className="w-14 h-14 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-orange-200">
+                <i data-lucide="rotate-ccw" size={28}></i>
+            </div>
+            <div className="text-center">
+                <h3 className="font-black text-slate-800 text-lg">逆練神識</h3>
+                <p className="text-[10px] text-slate-500 uppercase tracking-tighter">本尊 · 古神系統</p>
+            </div>
+        </div>
+        
+    </div>
+
+    {/* 天逆空間 (精神時光屋) - 改為橫向長條放置在下方 */}
+    <div 
+        onClick={() => setView('train')} 
+        className="glass p-5 rounded-3xl flex items-center justify-between cursor-pointer hover:bg-blue-50 border border-blue-100 transition-all active:scale-98"
     >
-        <div className="text-left">
-            <h3 className="text-xl font-black text-rose-400 uppercase">逆練神識</h3>
-            <p className="text-[10px] text-slate-500">本尊古神修煉 · 手寫刻印</p>
+        <div className="flex items-center space-x-4">
+            <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl">
+                <i data-lucide="box" size={24}></i>
+            </div>
+            <div>
+                <h4 className="font-bold text-slate-700">天逆空間</h4>
+                <p className="text-[10px] text-slate-400">精神時光屋 · 磨練神識</p>
+            </div>
         </div>
-        <div className="w-12 h-12 bg-rose-500/20 rounded-full flex items-center justify-center text-rose-500 group-hover:rotate-[180deg] transition-transform duration-700">
-            <i data-lucide="rotate-ccw" size={24}></i>
-        </div>
-    </button>
-                        <button onClick={()=>setView('train')} className="w-full h-32 glass rounded-[2.5rem] flex items-center justify-between px-10 border-blue-500/10 hover:border-blue-500/50 group">
-                            <div className="text-left"><h3 className="text-2xl font-black text-blue-400 uppercase">天逆空間</h3><p className="text-[10px] text-slate-500">精神時光屋 磨練神識</p></div>
-                            <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-black group-hover:rotate-[-12deg] transition-transform"><i data-lucide="zap" size={32}></i></div>
-                        </button>
-                    </div>
+        <i data-lucide="chevron-right" className="text-slate-300 mr-2"></i>
+    </div>
+</div>
                     <button onClick={onLogout} className="text-slate-600 text-xs font-black tracking-[0.5em] uppercase py-4">神魂離體 (登出)</button>
                 </div>
             );
