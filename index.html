@@ -300,48 +300,55 @@ const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
         </div>
     );
 };
-    const ReverseTrain = ({ words, setView }) => {
+    const ReverseTrain = ({ words, user, onUpdate, setView }) => {
+    // 1. Hooks 必須放在最前面
     const [curIdx, setCurIdx] = useState(0);
     const [shuffled, setShuffled] = useState([]);
 
-    // 初始化隨機題庫
+    // 2. 初始化隨機題庫
     useEffect(() => {
-        if (words.length > 0) {
+        if (words && words.length > 0) {
             setShuffled([...words].sort(() => Math.random() - 0.5));
         }
     }, [words]);
 
+    // 3. 下一題邏輯
     const nextWord = () => {
         if (curIdx + 1 < shuffled.length) {
-            setCurIdx(curIdx + 1);
+            setCurIdx(prev => prev + 1);
         } else {
-            // 全部練完後重新洗牌
             setShuffled([...words].sort(() => Math.random() - 0.5));
             setCurIdx(0);
         }
     };
 
-    if (shuffled.length === 0) return null;
+    // 4. 防崩潰判斷 (放在 Hooks 後面)
+    if (!shuffled || shuffled.length === 0) return <div className="p-10 text-white">神識感應中...</div>;
+    if (!shuffled[curIdx]) return null;
 
     return (
-        <div className="h-screen flex flex-col bg-[#020617]">
+        <div className="h-screen flex flex-col bg-[#020617] animate-in fade-in">
             <header className="p-6 flex justify-between items-center mt-6">
                 <span className="text-rose-400 font-black text-xs tracking-[0.3em] uppercase">
-                    逆練模式 · 悟道中
+                    逆練神識 · 悟道中
                 </span>
                 <span className="text-slate-600 text-[10px] font-mono">
-                    已感悟: {curIdx} 卷
+                    本尊修為: {user.ancientExp || 0}
                 </span>
             </header>
 
-            {/* 調用之前寫好的 HandwritingEngine，但修改 onResult 邏輯 */}
             <HandwritingEngine 
                 word={shuffled[curIdx].en} 
                 zh={shuffled[curIdx].zh} 
-                onResult={(isCorrect) => {
-                    if (isCorrect) {
-                        // 成功後直接下一題，不計積分
-                        nextWord();
+                onResult={(ok, pts) => {
+                    if (ok) {
+                        // 更新本尊古神修為 (ancientExp)
+                        const updated = { 
+                            ...user, 
+                            ancientExp: (user.ancientExp || 0) + pts 
+                        };
+                        onUpdate(updated); // 存檔同步
+                        nextWord(); // 下一題
                     }
                 }} 
                 onBack={() => setView('lobby')} 
@@ -484,7 +491,7 @@ const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
                         
                         {view === 'train' && <Training user={user} words={words} onUpdate={onUserUpdate} setView={setView} />}
                         
-                        {view === 'reverse_train' && <ReverseTrain words={words} setView={setView} />}
+                    {view === 'reverse_train' && <ReverseTrain words={words} user={user} onUpdate={onUserUpdate} setView={setView} />}
                         
                         {view === 'admin' && <Admin settings={settings} setSettings={(s)=>persist(null,null,null,s)} words={words} setWords={(w)=>persist(null,w,null,null)} batches={batches} setBatches={(b)=>persist(null,null,b,null)} users={users} setUsers={(u)=>persist(u)} setView={setView} curUser={user} setCurUser={setUser} />}
                     </div>
