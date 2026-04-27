@@ -245,13 +245,12 @@ const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
     // 強制聚焦，喚起鍵盤
     useEffect(() => { inputRef.current?.focus(); }, []);
 
-    const handleInput = (e) => {
-        const val = e.target.value.toLowerCase();
-        if (/^[a-z ]*$/.test(val) && val.length <= word.length) {
-            setInput(val);
-            setIsError(false);
-        }
-    };
+   const handleInput = (e) => {
+    const val = e.target.value; // 不要在這裡強制 toLowerCase，保留原始輸入感
+    // 只保留基本的長度保護，或者乾脆不設限，讓玩家能自由刪改
+    setInput(val);
+    setIsError(false);
+};
 
     const handleKeyDown = (e) => {
         if (e.key === "Enter" && input.length > 0) {
