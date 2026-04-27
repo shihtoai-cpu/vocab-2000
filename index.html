@@ -122,7 +122,26 @@
             { n: "踏天境", s: ["第九橋(永恆)"], c: "text-yellow-200" }
         ];
         const ALL_SUB = REALMS.flatMap(r => r.s.map(s => ({ m: r.n, s, c: r.c })));
+// --- 古神境界 (本尊系統) ---
+const ANCIENT_REALMS = [
+    { n: "半星古神", pts: 0, c: "text-slate-400" },
+    { n: "一星古神", pts: 1000, c: "text-orange-300" },
+    { n: "二星古神", pts: 5000, c: "text-orange-400" },
+    { n: "三星古神", pts: 15000, c: "text-orange-500" },
+    { n: "四星古神", pts: 40000, c: "text-red-400" },
+    { n: "五星古神", pts: 100000, c: "text-red-500" },
+    { n: "六星古神", pts: 250000, c: "text-purple-500" },
+    { n: "七星古神", pts: 600000, c: "text-pink-500" },
+    { n: "八星古神", pts: 1500000, c: "text-yellow-400 animate-pulse" },
+    { n: "九星古神", pts: 5000000, c: "text-yellow-200 animate-pulse" }
+];
 
+const getAncientRealm = (exp) => {
+    for (let i = ANCIENT_REALMS.length - 1; i >= 0; i--) {
+        if (exp >= ANCIENT_REALMS[i].pts) return ANCIENT_REALMS[i];
+    }
+    return ANCIENT_REALMS[0];
+};
         const getRealmInfo = (exp) => {
             let acc = 0;
             for (let i = 0; i < ALL_SUB.length; i++) {
@@ -181,113 +200,107 @@ const autoCategorize = (zh) => {
         );
 
         // --- 2. 封神碑 (大廳排行) ---
-        const HallOfFame = ({ users }) => {
-            const sorted = [...users].sort((a, b) => b.exp - a.exp);
-            return (
-                <div className="p-6 space-y-6 overflow-y-auto pb-32 animate-in slide-in-from-right">
-                    <div className="text-center py-4">
-                        <h2 className="text-3xl font-calligraphy gold-text">封神碑</h2>
-                        <p className="text-[10px] text-slate-500 tracking-widest uppercase">諸天萬界・唯我獨尊</p>
-                    </div>
-                    <div className="relative border-l-2 border-slate-800 ml-4 space-y-8 py-4">
-                        {sorted.map((u, i) => {
-                            const info = getRealmInfo(u.exp);
-                            return (
-                                <div key={i} className={`relative flex items-center ml-6 glass p-4 rounded-2xl border border-white/5 ${i === 0 ? 'rank-1 shadow-[0_0_30px_rgba(250,204,21,0.15)]' : ''}`}>
-                                    <div className={`absolute -left-10 w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${i === 0 ? 'bg-yellow-500 text-black shadow-[0_0_15px_#facc15]' : 'bg-slate-800 text-slate-400'}`}>
-                                        {i + 1}
-                                    </div>
-                                    <img src={u.avatar} className="w-10 h-10 rounded-full border-2 border-slate-700 mr-4 object-cover" />
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-start">
-                                            <span className="font-bold text-slate-200">{u.name}</span>
-                                            <span className="text-[10px] text-yellow-500 font-mono">{u.exp} PT</span>
-                                        </div>
-                                        <p className={`text-[10px] font-black uppercase ${info.c}`}>{info.m} · {info.s}</p>
-                                    </div>
+        // --- 修改 HallOfFame 組件中的用戶顯示部分 ---
+const HallOfFame = ({ users }) => {
+    const sorted = [...users].sort((a, b) => (b.exp + (b.ancientExp || 0)) - (a.exp + (a.ancientExp || 0)));
+    return (
+        <div className="p-6 space-y-6 overflow-y-auto pb-32">
+            <h2 className="text-3xl font-calligraphy gold-text text-center">封神碑</h2>
+            <div className="space-y-4">
+                {sorted.map((u, i) => {
+                    const tao = getRealmInfo(u.exp); // 分身修道
+                    const ancient = getAncientRealm(u.ancientExp || 0); // 本尊古神
+                    return (
+                        <div key={i} className="glass p-5 rounded-2xl border-l-4 border-yellow-500 flex items-center space-x-4">
+                            <img src={u.avatar} className="w-12 h-12 rounded-full border-2 border-slate-800" />
+                            <div className="flex-1">
+                                <h4 className="font-bold text-white text-lg">{u.name}</h4>
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded bg-blue-500/10 ${tao.c}`}>
+                                        {tao.m} · {tao.s}
+                                    </span>
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded bg-orange-500/10 ${ancient.c}`}>
+                                        ◆ {ancient.n}
+                                    </span>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            );
-        };
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] text-slate-500">總修為</p>
+                                <p className="text-xs font-mono font-bold text-yellow-500">{(u.exp + (u.ancientExp || 0)).toLocaleString()}</p>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
 
         // --- 3. 神識刻印 (手寫訓練核心) ---
 const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
-            const [input, setInput] = useState("");
-            const [isError, setIsError] = useState(false);
-            const inputRef = useRef(null);
+    const [input, setInput] = useState("");
+    const [isError, setIsError] = useState(false);
+    const inputRef = useRef(null);
 
-            // 自動聚焦
-            useEffect(() => {
-                if (inputRef.current) inputRef.current.focus();
-            }, []);
+    // 強制聚焦，喚起鍵盤
+    useEffect(() => { inputRef.current?.focus(); }, []);
 
-            const handleInputChange = (e) => {
-                const val = e.target.value;
-                // 只允許英文字母與空格
-                if (/^[a-zA-Z ]*$/.test(val)) {
-                    if (val.length <= word.length) {
-                        setInput(val);
-                        setIsError(false);
-                    }
-                }
-            };
+    const handleInput = (e) => {
+        const val = e.target.value.toLowerCase();
+        if (/^[a-z ]*$/.test(val) && val.length <= word.length) {
+            setInput(val);
+            setIsError(false);
+        }
+    };
 
-            const handleKeyDown = (e) => {
-                if (e.key === "Enter" && input.length > 0) {
-                    if (input.toLowerCase() === word.toLowerCase()) {
-                        onResult(true, 500);
-                    } else {
-                        setIsError(true);
-                        setTimeout(() => setIsError(false), 500);
-                    }
-                }
-            };
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter" && input.length > 0) {
+            if (input === word.toLowerCase()) {
+                onResult(true, 50); // 每次正確得 50 點古神修為
+                setInput("");
+            } else {
+                setIsError(true);
+                setTimeout(() => setIsError(false), 500);
+            }
+        }
+    };
 
-            return (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-12 w-full" 
-                     onClick={() => inputRef.current && inputRef.current.focus()}>
-                    
-                    {/* 隱藏輸入框：統一管理 PC 與手機輸入 */}
-                    <input 
-                        ref={inputRef}
-                        type="text"
-                        className="absolute opacity-0 pointer-events-none"
-                        value={input}
-                        onChange={handleInputChange}
-                        onKeyDown={handleKeyDown}
-                        autoFocus
-                    />
+    return (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-12" onClick={() => inputRef.current?.focus()}>
+            <input ref={inputRef} type="text" className="absolute opacity-0 pointer-events-none" value={input} onChange={handleInput} onKeyDown={handleKeyDown} autoFocus />
+            
+            <div className="text-center space-y-4">
+                <p className="text-orange-500 text-xs tracking-[0.5em] font-black uppercase">本尊古神修煉 · 神識刻印</p>
+                <h2 className="text-6xl font-bold text-white drop-shadow-lg">{zh}</h2>
+            </div>
 
-                    <div className="text-center space-y-2">
-                        <p className="text-slate-500 text-[10px] tracking-[0.5em] uppercase">神識刻印 (點擊畫面喚起鍵盤)</p>
-                        <h2 className="text-5xl font-bold text-white">{zh}</h2>
-                    </div>
+            {/* 核心需求：底線與格線 */}
+            <div className="flex flex-wrap justify-center items-end gap-y-10 max-w-full">
+                {word.split("").map((char, i) => {
+                    if (char === " ") return <div key={i} className="w-16" />; // 空格大幅加寬
+                    const isCurrent = input.length === i;
+                    const filledChar = input[i];
+                    return (
+                        <div key={i} className="flex flex-col items-center mx-1.5 w-8">
+                            <span className={`text-4xl font-black mb-2 h-10 ${isCurrent ? 'animate-pulse text-orange-400' : 'text-yellow-500'}`}>
+                                {filledChar || ""}
+                            </span>
+                            <div className={`h-1.5 w-full rounded-full transition-all duration-300 ${isError ? 'bg-red-500 animate-bounce' : (filledChar ? 'bg-orange-500 shadow-[0_0_12px_#f97316]' : 'bg-slate-800')}`} />
+                        </div>
+                    );
+                })}
+            </div>
 
-                    <div className="flex flex-wrap justify-center gap-y-10 max-w-full">
-                        {word.split("").map((char, i) => (
-                            char === " " 
-                            ? <div key={i} className="w-12" /> // 空格加寬區隔
-                            : <div key={i} className="flex flex-col items-center mx-1">
-                                <span className="text-4xl font-black text-yellow-500 h-10 font-mono">
-                                    {input[i] || ""}
-                                </span>
-                                <div className={`h-1 w-8 mt-2 transition-all duration-300 ${isError ? 'bg-red-500 error-shake' : (input[i] ? 'bg-yellow-500 shadow-[0_0_10px_#facc15]' : 'bg-slate-800')}`} />
-                              </div>
-                        ))}
-                    </div>
-
-                    <div className="text-slate-600 text-[10px] uppercase tracking-widest animate-pulse">
-                        {input.length > 0 ? "按 Enter 提交感悟" : "請直接輸入英文單字"}
-                    </div>
-                    
-                    <button onClick={onBack} className="btn-exit">中斷刻印</button>
-                </div>
-            );
-        };
-        const ReverseTrain = ({ words, setView }) => {
+            <div className="flex flex-col items-center space-y-4">
+                <p className="text-slate-500 text-[10px] tracking-widest uppercase">
+                    鍵盤輸入「{word.length}」個字母後按 Enter 提交
+                </p>
+                <button onClick={onBack} className="btn-exit">結束逆練</button>
+            </div>
+        </div>
+    );
+};
+    const ReverseTrain = ({ words, setView }) => {
     const [curIdx, setCurIdx] = useState(0);
     const [shuffled, setShuffled] = useState([]);
 
@@ -424,7 +437,21 @@ const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
                 <div className="relative min-h-screen flex flex-col items-center overflow-hidden">
                     <div className="vortex"></div>
                     <div className="relative z-10 w-full max-w-md min-h-screen flex flex-col">
-                        
+                        {view === 'reverse_train' && (
+    <div className="h-screen flex flex-col animate-in fade-in">
+        <HandwritingEngine 
+            word={shuffled[curIdx].en} 
+            zh={shuffled[curIdx].zh} 
+            onResult={(ok, pts) => {
+                // 更新本尊古神經驗值
+                const updated = { ...user, ancientExp: (user.ancientExp || 0) + pts };
+                onUserUpdate(updated);
+                nextWord();
+            }} 
+            onBack={() => setView('lobby')} 
+        />
+    </div>
+)}
                         {view === 'gate' && <Gate users={users} setView={setView} setUser={setUser} />}
                         
                         {view === 'reg' && <Register onBack={()=>setView('gate')} onDone={(u)=>{ persist([...users, u]); setView('gate'); }} />}
@@ -545,7 +572,8 @@ const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
         const Lobby = ({ user, settings, setView, onLogout, onUpdate }) => {
             const info = getRealmInfo(user.exp);
             const prog = ((user.exp - info.current) / (info.next - info.current)) * 100;
-            
+            // 在約第 575 行插入
+const ancient = getAncientRealm(user.ancientExp || 0);
             useEffect(() => {
                 const today = new Date().toDateString();
                 if(user.stats.lastDate !== today) { user.stats.rounds = 0; user.stats.spirit = 0; user.stats.lastDate = today; onUpdate(user); }
@@ -591,10 +619,20 @@ const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
                             }} 
                         />
                     </div>
-                    <div>
-                        <h2 className="text-2xl font-bold">{user.name}</h2>
-                        <p className={`text-[11px] font-black uppercase ${info.c}`}>{info.m}・{info.s}</p>
-                    </div>
+<div>
+    <h2 className="text-2xl font-bold">{user.name}</h2>
+    <div className="flex items-center space-x-2">
+        {/* 分身修道境界 */}
+        <p className={`text-[11px] font-black uppercase ${info.c}`}>
+            {info.m}・{info.s}
+        </p>
+        
+        {/* 本尊古神稱號 */}
+        <p className="text-[11px] font-black uppercase text-orange-500 shadow-orange-500/20">
+            ◆ {ancient.n}
+        </p>
+    </div>
+</div>
                 </div>
                         <button onClick={()=>setView('admin')} className="p-4 glass rounded-full text-yellow-500"><i data-lucide="shield-check"></i></button>
                     </header>
