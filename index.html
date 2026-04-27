@@ -444,21 +444,7 @@ const HandwritingEngine = ({ word, zh, onResult, onBack }) => {
                 <div className="relative min-h-screen flex flex-col items-center overflow-hidden">
                     <div className="vortex"></div>
                     <div className="relative z-10 w-full max-w-md min-h-screen flex flex-col">
-                        {view === 'reverse_train' && (
-    <div className="h-screen flex flex-col animate-in fade-in">
-        <HandwritingEngine 
-            word={shuffled[curIdx].en} 
-            zh={shuffled[curIdx].zh} 
-            onResult={(ok, pts) => {
-                // 更新本尊古神經驗值
-                const updated = { ...user, ancientExp: (user.ancientExp || 0) + pts };
-                onUserUpdate(updated);
-                nextWord();
-            }} 
-            onBack={() => setView('lobby')} 
-        />
-    </div>
-)}
+
                         {view === 'gate' && <Gate users={users} setView={setView} setUser={setUser} />}
                         
                         {view === 'reg' && <Register onBack={()=>setView('gate')} onDone={(u)=>{ persist([...users, u]); setView('gate'); }} />}
